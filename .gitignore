@@ -1,0 +1,26 @@
+# .gitignore
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+dist/
+build/
+coverage/
+
+# Prisma
+.prisma/
+prisma/dev.db
+prisma/*.db
+prisma/*.db-journal
+
+# Env / secretos
+.env
+.env.local
+.env.*.local
+
+# SO / IDE
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

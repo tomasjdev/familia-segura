@@ -1,0 +1,1621 @@
+
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Familia Segura - Inicio</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <style>
+    #map { height: 500px; }
+    .pulse-alert { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.7); } 70% { box-shadow: 0 0 0 10px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
+    .modal-open #map { filter: blur(1px); pointer-events: none; }
+
+    /* Toasts */
+    .toast-enter { transform: translateY(12px) scale(.98); opacity: 0; }
+    .toast-enter-active { transition: all .25s ease; transform: translateY(0) scale(1); opacity: 1; }
+    .toast-exit { transition: opacity .2s ease, transform .2s ease; opacity: 0; transform: translateY(-6px) scale(.98); }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div class="min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <!-- Brand + Desktop Nav -->
+          <div class="flex items-center">
+            <div class="flex-shrink-0 flex items-center">
+              <img src="img/logoiniciosesion.png" alt="Logo" class="h-8 w-8">
+              <span class="ml-2 text-xl font-semibold">Familia Segura</span>
+            </div>
+            <!-- Desktop nav -->
+            <div class="hidden md:ml-6 md:flex md:space-x-8">
+              <a href="#panel"        id="tab-panel"        class="router-link border-b-2 inline-flex items-center px-1 pt-1 text-sm font-medium">Panel</a>
+              <a href="#pacientes"    id="tab-pacientes"    class="router-link border-b-2 inline-flex items-center px-1 pt-1 text-sm font-medium">Pacientes</a>
+              <a href="#dispositivos" id="tab-dispositivos" class="router-link border-b-2 inline-flex items-center px-1 pt-1 text-sm font-medium">Dispositivos</a>
+              <a href="#alertas"      id="tab-alertas"      class="router-link border-b-2 inline-flex items-center px-1 pt-1 text-sm font-medium">Alertas</a>
+            </div>
+          </div>
+
+          <!-- Desktop profile -->
+          <div class="hidden md:ml-6 md:flex md:items-center">
+            <div class="ml-3 relative">
+              <div class="flex items-center space-x-4">
+                <span class="text-sm font-medium"></span>
+                <img id="profile-avatar" class="h-8 w-8 rounded-full cursor-pointer hover:ring-2 hover:ring-white/70"
+                     src="img/admin.png" alt="Perfil" title="Abrir menú" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile hamburger -->
+          <div class="flex items-center md:hidden">
+            <button id="nav-toggle" class="inline-flex items-center justify-center p-2 rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-white/50" aria-label="Abrir menú">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile menu (collapsible) -->
+      <div id="mobile-menu" class="md:hidden hidden border-t border-blue-500/30">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+          <a href="#panel"        class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-500/30">Panel</a>
+          <a href="#pacientes"    class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-500/30">Pacientes</a>
+          <a href="#dispositivos" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-500/30">Dispositivos</a>
+          <a href="#alertas"      class="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-500/30">Alertas</a>
+        </div>
+        <div class="px-4 pb-3 border-t border-blue-500/30">
+          <div class="flex items-center py-3">
+            <img src="img/admin.png" class="h-8 w-8 rounded-full" alt="Perfil">
+            <span class="ml-3 text-sm">Menú</span>
+            <button id="mobile-logout" class="ml-auto px-3 py-1.5 text-sm rounded-md bg-red-600 hover:bg-red-700">Cerrar sesión</button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- CONTENIDOS -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+      <!-- PANEL -->
+      <section id="panel" class="route">
+        <div class="sm:flex sm:items-center sm:justify-between mb-8">
+          <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">Panel de Monitoreo</h2>
+          </div>
+
+          <!-- Acciones: Desktop -->
+          <div class="mt-4 hidden sm:mt-0 sm:ml-4 sm:flex">
+            <button type="button" id="add-patient" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              Añadir paciente
+            </button>
+            <button type="button" id="btnEliminarPaciente" class="ml-3 inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Eliminar paciente
+            </button>
+            <button
+              type="button"
+              id="btnEliminarDispositivo"
+              class="ml-3 inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Eliminar dispositivo
+            </button>
+            <!-- NUEVO: Eliminar usuario por email -->
+            <button type="button" id="btnEliminarUsuario"
+              class="ml-3 inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Eliminar usuario
+            </button>
+          </div>
+
+          <!-- Acciones: Mobile (menú) -->
+          <div class="mt-4 sm:hidden relative">
+            <button id="actions-menu-btn" class="inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">
+              Acciones
+              <svg class="ml-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+            </button>
+            <div id="actions-menu" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-20">
+              <div class="py-1">
+                <button data-action="add"  class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100">Añadir paciente</button>
+                <button data-action="ep"   class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100">Eliminar paciente</button>
+                <button data-action="ed"   class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100">Eliminar dispositivo</button>
+                <button data-action="eu"   class="w-full text-left px-4 py-2 text-sm hover:bg-gray-100">Eliminar usuario</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                  <img src="img/pacientes.png" alt="Pacientes" class="h-6 w-6 text-white">
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dt class="text-sm font-medium text-gray-500 truncate">Pacientes activos</dt>
+                  <dd id="statPatients" class="text-2xl font-semibold text-gray-900">—</dd>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+                  <img src="img/ubicacion.png" alt="Dispositivos" class="h-6 w-6 text-white">
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dt class="text-sm font-medium text-gray-500 truncate">Dispositivos activos</dt>
+                  <dd id="statDevices" class="text-2xl font-semibold text-gray-900">—</dd>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+                  <img src="img/alerta.png" alt="Alertas" class="h-6 w-6 text-white">
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dt class="text-sm font-medium text-gray-500 truncate">Alertas</dt>
+                  <dd id="statAlerts" class="text-2xl font-semibold text-gray-900">—</dd>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white overflow-hidden shadow rounded-lg pulse-alert">
+            <div class="px-4 py-5 sm:p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-red-500 rounded-md p-3">
+                  <img src="img/alerta.png" alt="SOS" class="h-6 w-6 text-white">
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dt class="text-sm font-medium text-gray-500 truncate">Emergencias activas</dt>
+                  <dd id="statEmergencias" class="text-2xl font-semibold text-gray-900">-</dd>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mapa + listas -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Ubicación en tiempo real</h3>
+              </div>
+              <div id="map" class="w-full"></div>
+            </div>
+
+            <div>
+              <div class="bg-white shadow rounded-lg overflow-hidden mb-2">
+                <div class="px-4 py-4 sm:px-6 border-b border-gray-200 flex items-center justify-between">
+                  <h3 class="text-lg leading-6 font-medium text-gray-900">Historial de Alertas</h3>
+                  <button class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700" data-collapse-target="alertsListPanel" data-collapse-key="panel_alertas">
+                    <span class="txt">Minimizar</span>
+                    <svg class="caret h-4 w-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                  </button>
+                </div>
+                <ul id="alertsListPanel" class="divide-y divide-gray-200">
+                  <li class="px-6 py-4 text-sm text-gray-500">Cargando alertas…</li>
+                </ul>
+              </div>
+
+              <div class="bg-white rounded-lg shadow">
+                <div class="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h3 class="text-lg font-medium text-gray-900">Emergencias activas</h3>
+                  <button class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700" data-collapse-target="emergenciasListPanel" data-collapse-key="panel_emergencias">
+                    <span class="txt">Minimizar</span>
+                    <svg class="caret h-4 w-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+                  </button>
+                </div>
+                <ul id="emergenciasListPanel" class="divide-y divide-gray-200">
+                  <li class="p-4 text-sm text-gray-500">Cargando emergencias…</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <div class="px-4 py-5 sm:px-6 border-b border-gray-200"><h3 class="text-lg font-medium text-gray-900">Pacientes monitoreados</h3></div>
+              <ul id="patientsListAside" class="divide-y divide-gray-200"><li class="px-6 py-4 text-sm text-gray-500">Cargando pacientes…</li></ul>
+            </div>
+
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+              <div class="px-4 py-5 sm:px-6 border-gray-200"><h3 class="text-lg font-medium text-gray-900">Estado de dispositivos</h3></div>
+              <ul id="devicesList" class="divide-y divide-gray-200"><li class="px-6 py-4 text-sm text-gray-500">Cargando dispositivos…</li></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PACIENTES -->
+      <section id="pacientes" class="route hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Gestión de Pacientes</h2>
+          <p class="text-sm text-gray-500">Busca, añade y edita información de pacientes.</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col sm:flex-row gap-3">
+          <input type="text" id="searchPatient" placeholder="Buscar por nombre del paciente" class="flex-1 border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button id="btnNuevoPaciente" class="px-4 py-2 bg-blue-600 text-white rounded-md">Nuevo</button>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paciente</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Edad</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condición</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="patientsTable" class="bg-white divide-y divide-gray-200">
+              <tr><td class="px-6 py-4 text-sm text-gray-500" colspan="4">Cargando pacientes…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DISPOSITIVOS -->
+      <section id="dispositivos" class="route hidden">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">Gestión de Dispositivos</h2>
+            <p class="text-sm text-gray-500">Registra y enlaza dispositivos a pacientes.</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btnRegistrarDispositivo" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md">
+              Registrar dispositivo
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+          <ul id="devicesListPage" class="divide-y divide-gray-200">
+            <li class="px-6 py-4 text-sm text-gray-500">Cargando dispositivos…</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ALERTAS -->
+      <section id="alertas" class="route hidden">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Centro de Alertas</h2>
+          <p class="text-sm text-gray-500">Filtra y atiende eventos: SOS, caídas, geocercas.</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow">
+          <div class="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900">Historial de Alertas</h3>
+            <button class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700" data-collapse-target="alertsList" data-collapse-key="alertas_alertas">
+              <span class="txt">Minimizar</span>
+              <svg class="caret h-4 w-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+            </button>
+          </div>
+          <ul id="alertsList" class="divide-y divide-gray-200">
+            <li class="p-4 text-sm text-gray-500">Cargando alertas…</li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow mt-4">
+          <div class="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900">Emergencias activas</h3>
+            <button class="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700" data-collapse-target="emergenciasList" data-collapse-key="alertas_emergencias">
+              <span class="txt">Minimizar</span>
+              <svg class="caret h-4 w-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" /></svg>
+          </div>
+          <ul id="emergenciasList" class="divide-y divide-gray-200">
+            <li class="p-4 text-sm text-gray-500">Cargando emergencias…</li>
+          </ul>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: CREAR / EDITAR PACIENTE -->
+  <div id="ap_modal" class="hidden fixed inset-0 z-[10000]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative mx-auto my-10 w-full max-w-4xl bg-white rounded-xl shadow-xl">
+      <div class="px-6 py-4 border-b">
+        <h3 id="ap_title" class="text-lg font-semibold">Añadir nuevo paciente</h3>
+      </div>
+      <form id="ap_form" class="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
+        <!-- Usuario -->
+        <fieldset class="space-y-3">
+          <legend class="font-semibold text-gray-900">Usuario asociado (nuevo usuario)</legend>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium">Correo electrónico (nuevo usuario)</label>
+              <input id="ap_user_email" type="email" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="correo@dominio.com">
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Contraseña</label>
+              <input id="ap_user_pass" type="password" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="••••••••">
+            </div>
+          </div>
+          <p class="text-xs text-gray-500">Si completas estos campos, se creará un usuario automáticamente y se asignará como dueño del paciente.</p>
+        </fieldset>
+
+        <!-- Paciente -->
+        <fieldset class="space-y-3">
+          <legend class="font-semibold text-gray-900">Paciente</legend>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><label class="block text-sm font-medium">Nombre</label><input id="ap_name" class="mt-1 w-full border rounded-md px-3 py-2" required></div>
+            <div><label class="block text-sm font-medium">Edad</label><input id="ap_age" type="number" min="0" class="mt-1 w-full border rounded-md px-3 py-2" required></div>
+            <div><label class="block text-sm font-medium">Condición</label><input id="ap_condition" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+            <div><label class="block text-sm font-medium">Teléfono</label><input id="ap_phone" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="+56"></div>
+            <div><label class="block text-sm font-medium">Dirección</label><input id="ap_address" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+            <div><label class="block text-sm font-medium">Sistema de salud (EPS)</label><input id="ap_eps" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+            <div><label class="block text-sm font-medium">Grupo sanguíneo</label><input id="ap_blood" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="O+, A-, etc."></div>
+            <div class="md:col-span-2"><label class="block text-sm font-medium">Notas</label><textarea id="ap_notes" rows="2" class="mt-1 w-full border rounded-md px-3 py-2"></textarea></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="space-y-2">
+          <legend class="font-semibold text-gray-900">Alergias</legend>
+          <textarea id="ap_allergies" rows="2" class="w-full border rounded-md px-3 py-2" placeholder="Separadas por coma: Penicilina, Polen"></textarea>
+        </fieldset>
+
+        <fieldset class="space-y-3">
+          <legend class="font-semibold text-gray-900">Contactos de emergencia</legend>
+          <div id="ap_contactsWrap" class="space-y-3"></div>
+          <button type="button" id="ap_btnAddContact" class="px-3 py-1.5 text-sm rounded-md border">+ Añadir contacto</button>
+        </fieldset>
+
+        <fieldset class="space-y-3">
+          <legend class="font-semibold text-gray-900">Acompañante</legend>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><label class="block text-sm font-medium">Nombre</label><input id="ap_cp_nombre" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+            <div><label class="block text-sm font-medium">Teléfono</label><input id="ap_cp_telefono" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+            <div><label class="block text-sm font-medium">Email</label><input id="ap_cp_email" type="email" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+            <div><label class="block text-sm font-medium">Dirección</label><input id="ap_cp_direccion" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+          </div>
+          <p class="text-xs text-gray-500">Si lo dejas vacío, no se creará/actualizará acompañante.</p>
+        </fieldset>
+
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" id="ap_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+          <button id="ap_submit" class="px-4 py-2 rounded-md bg-blue-600 text-white">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- FIN MODAL PACIENTE -->
+
+  <!-- MODAL: REGISTRAR DISPOSITIVO -->
+  <div id="dr_modal" class="hidden fixed inset-0 z-[10020]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative mx-auto my-20 w-full max-w-md bg-white rounded-xl shadow-xl">
+      <div class="px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold">Registrar dispositivo</h3>
+      </div>
+      <form id="dr_form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Código de emparejamiento (6 dígitos)</label>
+          <input id="dr_code" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="123456" required>
+          <p class="text-xs text-gray-500 mt-1">Este código de emparejamiento (6 dígitos) es el que usará el reloj para conectarse.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Nombre (opcional)</label>
+          <input id="dr_name" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="WearOS">
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Modelo (opcional)</label>
+          <input id="dr_model" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="Galaxy Watch 7">
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Enlazar a paciente (opcional)</label>
+          <select id="dr_patient" class="mt-1 w-full border rounded-md px-3 py-2">
+            <option value="">— Sin enlazar —</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" id="dr_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+          <button id="dr_submit" class="px-4 py-2 rounded-md bg-green-600 text-white">Registrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- FIN MODAL REGISTRAR DISPOSITIVO -->
+
+  <!-- MODAL: ELIMINAR DISPOSITIVO -->
+  <div id="dd_modal" class="hidden fixed inset-0 z-[10030]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative mx-auto my-20 w-full max-w-md bg-white rounded-xl shadow-xl">
+      <div class="px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold">Eliminar dispositivo</h3>
+      </div>
+      <form id="dd_form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium">Selecciona el dispositivo</label>
+          <select id="dd_select" class="mt-1 w-full border rounded-md px-3 py-2" required>
+            <option value="">— Selecciona —</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-1">
+            Se borrará definitivamente. Si estaba asignado a un paciente, quedará desasignado.
+          </p>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" id="dd_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+          <button id="dd_submit" class="px-4 py-2 rounded-md bg-red-600 text-white">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- FIN MODAL ELIMINAR DISPOSITIVO -->
+
+  <!-- MODAL: CERRAR SESIÓN -->
+  <div id="logout_modal" class="hidden fixed inset-0 z-[11000]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative mx-auto my-20 w-full max-w-md bg-white rounded-xl shadow-xl">
+      <div class="px-6 py-4 border-b">
+        <h3 class="text-lg font-semibold">¿Cerrar sesión?</h3>
+      </div>
+      <div class="p-6 text-sm text-gray-600">Saldrás del panel administrativo y volverás a Inicio de sesión.</div>
+      <div class="px-6 py-4 border-t flex justify-end gap-2">
+        <button id="logout_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+        <button id="logout_confirm" class="px-4 py-2 rounded-md bg-red-600 text-white">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+  <!-- FIN MODAL LOGOUT -->
+
+  <!-- MODAL GENÉRICO DE CONFIRMACIÓN -->
+  <div id="confirm_modal" class="hidden fixed inset-0 z-[10900]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative mx-auto my-20 w-full max-w-md bg-white rounded-xl shadow-xl">
+      <div class="px-6 py-4 border-b">
+        <h3 id="confirm_title" class="text-lg font-semibold">Confirmar acción</h3>
+      </div>
+      <div class="p-6">
+        <p id="confirm_message" class="text-sm text-gray-700">¿Estás seguro?</p>
+      </div>
+      <div class="px-6 py-4 border-t flex justify-end gap-2">
+        <button id="confirm_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+        <button id="confirm_ok" class="px-4 py-2 rounded-md bg-blue-600 text-white">Aceptar</button>
+      </div>
+    </div>
+  </div>
+  <!-- FIN MODAL CONFIRMACIÓN -->
+
+  <!-- MODAL GENÉRICO DE INPUT (ID / EMAIL) -->
+  <div id="input_modal" class="hidden fixed inset-0 z-[10850]">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative mx-auto my-20 w-full max-w-md bg-white rounded-xl shadow-xl">
+      <div class="px-6 py-4 border-b">
+        <h3 id="input_title" class="text-lg font-semibold">Ingresar dato</h3>
+      </div>
+      <form id="input_form" class="p-6 space-y-4">
+        <div>
+          <label id="input_label" class="block text-sm font-medium mb-1">Dato</label>
+          <input id="input_field" class="mt-1 w-full border rounded-md px-3 py-2" />
+        </div>
+        <div class="flex justify-end gap-2 border-t pt-3">
+          <button type="button" id="input_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+          <button id="input_ok" class="px-4 py-2 rounded-md bg-blue-600 text-white">Aceptar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- FIN MODAL INPUT -->
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-root" class="pointer-events-none fixed z-[12000] bottom-4 right-4 flex flex-col gap-2 w-[calc(100%-1rem)] max-w-sm sm:right-6 sm:bottom-6"></div>
+
+  <!-- Router + UI Logic + Consumo de API -->
+  <script>
+    const API = '';
+    const api = (p) => API + (p.startsWith('/') ? p : '/' + p);
+
+    // ======= TOASTS =======
+    const TOAST_ICONS = {
+      info: '🛈',
+      success: '✅',
+      warning: '⚠️',
+      error: '⛔'
+    };
+    const TOAST_STYLES = {
+      info:    'bg-blue-50 border-blue-200 text-blue-800',
+      success: 'bg-green-50 border-green-200 text-green-800',
+      warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+      error:   'bg-red-50 border-red-200 text-red-800'
+    };
+
+    function toast(message, type='info', opts = {}) {
+      const root = document.getElementById('toast-root');
+      if (!root) return;
+      const id = 't_' + Math.random().toString(36).slice(2);
+      const el = document.createElement('div');
+      el.id = id;
+      el.className = `toast-enter pointer-events-auto shadow-lg rounded-xl border ${TOAST_STYLES[type] || TOAST_STYLES.info} p-3 flex items-start gap-3`;
+      el.innerHTML = `
+        <div class="text-xl leading-none mt-[2px]">${TOAST_ICONS[type] || TOAST_ICONS.info}</div>
+        <div class="flex-1 text-sm">${message}</div>
+        <button class="shrink-0 rounded-lg px-2 py-1 text-xs/4 bg-white/60 hover:bg-white/80 border">Cerrar</button>
+      `;
+      root.appendChild(el);
+      // enter animation
+      queueMicrotask(()=> el.classList.add('toast-enter-active'));
+      const close = () => {
+        el.classList.add('toast-exit');
+        setTimeout(() => el.remove(), 220);
+      };
+      el.querySelector('button')?.addEventListener('click', close);
+      const t = Number(opts.timeout ?? 4200);
+      if (t > 0) setTimeout(close, t);
+      return { close };
+    }
+
+    const toastInfo    = (m,t)=>toast(m,'info',{timeout:t});
+    const toastOk      = (m,t)=>toast(m,'success',{timeout:t});
+    const toastWarn    = (m,t)=>toast(m,'warning',{timeout:t});
+    const toastError   = (m,t)=>toast(m,'error',{timeout:t});
+
+    // ===== MODALES GENÉRICOS (confirm / input) =====
+    function openConfirmModal(message, options = {}) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('confirm_modal');
+        if (!modal) {
+          const ok = window.confirm(message);
+          return resolve(ok);
+        }
+        const titleEl = document.getElementById('confirm_title');
+        const msgEl   = document.getElementById('confirm_message');
+        const btnOk   = document.getElementById('confirm_ok');
+        const btnCancel = document.getElementById('confirm_cancel');
+        const bg      = modal.querySelector('.absolute.inset-0');
+
+        titleEl.textContent = options.title || 'Confirmar acción';
+        msgEl.textContent   = message || '¿Estás seguro?';
+
+        const cleanup = (result) => {
+          modal.classList.add('hidden');
+          document.body.classList.remove('modal-open');
+          btnOk.removeEventListener('click', onOk);
+          btnCancel.removeEventListener('click', onCancel);
+          bg.removeEventListener('click', onCancel);
+          resolve(result);
+        };
+        const onOk = (ev) => { ev?.preventDefault(); cleanup(true); };
+        const onCancel = (ev) => { ev?.preventDefault(); cleanup(false); };
+
+        btnOk.addEventListener('click', onOk);
+        btnCancel.addEventListener('click', onCancel);
+        bg.addEventListener('click', onCancel);
+
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+      });
+    }
+
+    function openInputModal({ title, label, placeholder = '', type = 'text' }) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('input_modal');
+        if (!modal) {
+          const v = window.prompt(label || title || '');
+          return resolve(v ?? null);
+        }
+        const titleEl = document.getElementById('input_title');
+        const labelEl = document.getElementById('input_label');
+        const field   = document.getElementById('input_field');
+        const form    = document.getElementById('input_form');
+        const btnCancel = document.getElementById('input_cancel');
+        const bg      = modal.querySelector('.absolute.inset-0');
+
+        titleEl.textContent = title || 'Ingresar dato';
+        labelEl.textContent = label || 'Dato';
+        field.value = '';
+        field.placeholder = placeholder || '';
+        field.type = type || 'text';
+
+        const cleanup = (result) => {
+          modal.classList.add('hidden');
+          document.body.classList.remove('modal-open');
+          form.removeEventListener('submit', onSubmit);
+          btnCancel.removeEventListener('click', onCancel);
+          bg.removeEventListener('click', onCancel);
+          resolve(result);
+        };
+        const onCancel = (ev) => { ev?.preventDefault(); cleanup(null); };
+        const onSubmit = (ev) => {
+          ev.preventDefault();
+          cleanup(field.value.trim());
+        };
+
+        form.addEventListener('submit', onSubmit);
+        btnCancel.addEventListener('click', onCancel);
+        bg.addEventListener('click', onCancel);
+
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        setTimeout(() => field.focus(), 60);
+      });
+    }
+
+    // ====== Auth header ======
+    (function(){
+      const orig = window.fetch;
+      window.fetch = (input, init = {}) => {
+        const token = localStorage.getItem('token');
+        const headers = new Headers(init.headers || {});
+        if (token) headers.set('Authorization','Bearer '+token);
+        return orig(input, { ...init, headers });
+      };
+    })();
+
+    // Guard: admin
+    (function guard(){
+      const token = localStorage.getItem('token');
+      const role  = (localStorage.getItem('role') || '').toUpperCase();
+      if (!token) { window.location.replace('/iniciosesion.html'); return; }
+      if (role !== 'ADMIN') { window.location.replace('/usuario.html#inicio'); }
+    })();
+
+    // Google Maps
+    let gmap = null, gmarker = null, ginfo = null;
+    window.initGMap = function () {
+      const el = document.getElementById('map'); if (!el) return;
+      gmap = new google.maps.Map(el, { center: { lat: -33.4489, lng: -70.6693 }, zoom: 12 });
+    };
+    window.initMap = () => window.initGMap && window.initGMap();
+    function initMapOnce() { if (!gmap && window.google && google.maps) window.initGMap(); }
+
+    // Rutas
+    function setActiveTab(tabId) {
+      const tabs = ['panel','pacientes','dispositivos','alertas'];
+      tabs.forEach(id => {
+        const el = document.getElementById('tab-' + id);
+        const isActive = id === tabId;
+        if (!el) return;
+        el.classList.toggle('text-white', isActive);
+        el.classList.toggle('border-blue-500', isActive);
+        el.classList.toggle('hover:text-gray-200', !isActive);
+        el.classList.toggle('hover:border-gray-300', !isActive);
+        el.classList.toggle('text-gray-200', !isActive);
+        el.classList.toggle('border-transparent', !isActive);
+      });
+    }
+
+    function renderRoute() {
+      const hash = (location.hash || '#panel').replace('#','');
+      const routes = ['panel','pacientes','dispositivos','alertas'];
+      routes.forEach(id => {
+        const sec = document.getElementById(id);
+        if (sec) sec.classList.toggle('hidden', id !== hash);
+      });
+      setActiveTab(hash);
+      if (hash === 'panel') {
+        initMapOnce();
+        cargarPacientesAside();
+        cargarAlertasPanel();
+        actualizarStatPacientes();
+        actualizarStatAlertas(); 
+        cargarUltimaPosicion(1);
+        cargarDispositivos();
+        cargarEmergencias();
+      } else if (hash === 'pacientes') {
+        cargarPacientesTabla();
+      } else if (hash === 'alertas') {
+        cargarAlertas(); cargarEmergencias();
+        actualizarStatAlertas();  
+      } else if (hash === 'dispositivos') {
+        cargarDispositivos();
+      }
+      wireCollapsibles();
+      document.getElementById('mobile-menu')?.classList.add('hidden');
+      document.getElementById('actions-menu')?.classList.add('hidden');
+    }
+
+    window.addEventListener('hashchange', renderRoute);
+    window.addEventListener('load', () => {
+      if (!location.hash) location.hash = '#panel';
+      renderRoute();
+      wireAddPatientModal();
+      wireDeviceRegisterModal();
+      wireLogoutModal();
+      wireDismissButtons();
+      wireEliminarPaciente();
+      wireDeviceDeleteModal();
+      wireEliminarUsuario();   
+      wireMobileNav();         
+      wireMobileActions();     
+      wireClickOutsideMenus(); 
+      wirePacientesAsideClicks(); 
+    });
+
+    // === NUEVO: navegación móvil ===
+    function wireMobileNav(){
+      const btn = document.getElementById('nav-toggle');
+      const menu = document.getElementById('mobile-menu');
+      btn?.addEventListener('click', () => {
+        menu?.classList.toggle('hidden');
+      });
+    }
+
+    // === NUEVO: menú de acciones móvil ===
+    function wireMobileActions(){
+      const btn = document.getElementById('actions-menu-btn');
+      const menu = document.getElementById('actions-menu');
+      btn?.addEventListener('click', () => menu.classList.toggle('hidden'));
+
+      menu?.addEventListener('click', (e) => {
+        const t = e.target.closest('[data-action]');
+        if (!t) return;
+        const act = t.getAttribute('data-action');
+        const click = (id) => document.getElementById(id)?.click();
+        if (act === 'add') click('add-patient');
+        else if (act === 'ep') click('btnEliminarPaciente');
+        else if (act === 'ed') click('btnEliminarDispositivo');
+        else if (act === 'eu') click('btnEliminarUsuario');
+        menu.classList.add('hidden');
+      });
+    }
+
+    // === NUEVO: cerrar menús al hacer clic fuera ===
+    function wireClickOutsideMenus(){
+      document.addEventListener('click', (e) => {
+        const am = document.getElementById('actions-menu');
+        const amb = document.getElementById('actions-menu-btn');
+        if (am && !am.classList.contains('hidden')) {
+          if (!am.contains(e.target) && !amb.contains(e.target)) am.classList.add('hidden');
+        }
+        const mm = document.getElementById('mobile-menu');
+        const nt = document.getElementById('nav-toggle');
+        if (mm && !mm.classList.contains('hidden')) {
+          if (!mm.contains(e.target) && !nt.contains(e.target)) mm.classList.add('hidden');
+        }
+      });
+    }
+
+    // API helpers
+    async function fetchPacientes() { const res = await fetch(api('/api/patients')); return await res.json(); }
+    async function fetchAlertas()   { const res = await fetch(api('/api/alerts'));  return await res.json(); }
+    async function fetchDevices()   { const res = await fetch(api('/api/devices')); return await res.json(); }
+
+    // Colapsables
+    function setCollapsed(key, collapsed, targetEl, btn){
+      localStorage.setItem(key, collapsed ? '1' : '0');
+      if (collapsed) targetEl.classList.add('hidden'); else targetEl.classList.remove('hidden');
+      btn?.querySelector('.caret')?.classList.toggle('rotate-180', !collapsed);
+      const t = btn?.querySelector('.txt'); if (t) t.textContent = collapsed ? 'Expandir' : 'Minimizar';
+    }
+    function wireCollapsibles(){
+      document.querySelectorAll('[data-collapse-target]').forEach(btn => {
+        const targetId = btn.getAttribute('data-collapse-target');
+        const key = btn.getAttribute('data-collapse-key') || targetId;
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        const initCollapsed = localStorage.getItem(key) === '1';
+        setCollapsed(key, initCollapsed, target, btn);
+        btn.onclick = () => {
+          const isCurrentlyHidden = target.classList.contains('hidden');
+          setCollapsed(key, !isCurrentlyHidden, target, btn);
+        };
+      });
+    }
+
+    // Tabla Pacientes
+    async function cargarPacientesTabla() {
+      const tbody = document.getElementById('patientsTable');
+      if (!tbody) return;
+      tbody.innerHTML = `<tr><td class="px-6 py-4 text-sm text-gray-500" colspan="4">Cargando…</td></tr>`;
+      const data = await fetchPacientes();
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-sm text-gray-500" colspan="4">Sin pacientes.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(p => `
+        <tr>
+          <td class="px-6 py-4">${p.name} <span class="text-gray-400 text-xs">(ID ${p.id})</span></td>
+          <td class="px-6 py-4">${p.age}</td>
+          <td class="px-6 py-4">${p.condition ?? '-'}</td>
+
+          <td class="px-6 py-4 text-right space-x-2">
+            <button class="ml-3 text-gray-600 hover:underline btn-edit" data-id="${p.id}">Editar</button>
+            <button class="ml-3 text-blue-600 hover:underline btn-map" data-id="${p.id}">Ver mapa</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-edit');
+        if (!btn) return;
+        const id = Number(btn.dataset.id);
+        const list = await fetchPacientes();
+        const p = list.find(x => x.id === id);
+        if (!p) { toastWarn('Paciente no encontrado.'); return; }
+        ap_open('edit', p);
+      });
+
+      tbody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-map');
+        if (!btn) return;
+        const id = Number(btn.dataset.id);
+        abrirGoogleMapsConUltimaPosicion(id);
+      });
+    }
+
+    async function cargarPacientesAside() {
+      const ul = document.getElementById('patientsListAside');
+      const stat = document.getElementById('statPatients');
+      if (!ul) return;
+      ul.innerHTML = `<li class="px-6 py-4 text-sm text-gray-500">Cargando…</li>`;
+      const data = await fetchPacientes();
+      if (stat) stat.textContent = data.length ?? '0';
+      if (!data.length) {
+        ul.innerHTML = `<li class="px-6 py-4 text-sm text-gray-500">Sin pacientes.</li>`;
+        return;
+      }
+      ul.innerHTML = data.map(p => `
+      <li class="px-6 py-4 flex items-center">
+        <img class="h-10 w-10 rounded-full" src="https://placehold.co/80x80" alt="">
+        <div class="ml-4">
+          <div class="text-sm font-medium text-gray-900">
+            ${p.name} <span class="text-gray-400 text-xs">(ID ${p.id})</span>
+          </div>
+          <div class="text-sm text-gray-500">${p.age} años - ${p.condition ?? '-'}</div>
+        </div>
+        <button
+          type="button"
+          class="ml-auto px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 btn-show-on-map"
+          data-id="${p.id}">
+          Ver en mapa
+        </button>
+      </li>
+    `).join('');
+
+    }
+
+    function actualizarStatPacientes() {
+      fetchPacientes().then(d => {
+        const stat = document.getElementById('statPatients');
+        if (stat) stat.textContent = d.length ?? '0';
+      });
+    }
+
+    function actualizarStatAlertas() {
+      fetchAlertas()
+        .then(d => {
+          const stat = document.getElementById('statAlerts');
+          if (stat) stat.textContent = d.length ?? '0';
+        })
+        .catch(() => {
+          const stat = document.getElementById('statAlerts');
+          if (stat) stat.textContent = '–';
+        });
+    }
+
+    // Permite que el botón "Ver en mapa" del panel lateral
+    // cambie al panel y centre el mapa en el paciente.
+    function wirePacientesAsideClicks() {
+      const ul = document.getElementById('patientsListAside');
+      if (!ul) return;
+
+      ul.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-show-on-map');
+        if (!btn) return;
+
+        const id = Number(btn.dataset.id);
+        if (!id) return;
+
+        // Ir al panel
+        location.hash = '#panel';
+
+        // Dar un pequeño tiempo a que se renderice el panel y el mapa,
+        // luego centramos en la última posición del paciente.
+        setTimeout(() => {
+          cargarUltimaPosicion(id);
+        }, 150);
+      });
+    }
+
+
+
+    // ===== MODAL Paciente =====
+    let AP_MODE = 'create', AP_EDIT_ID = null;
+    function apContactRowTemplate(c = {}) {
+      const id = Math.random().toString(36).slice(2);
+      return `
+        <div class="ap-contact-row grid grid-cols-1 md:grid-cols-5 gap-2 items-end p-3 border rounded-md" data-id="${id}">
+          <div><label class="block text-xs font-medium">Nombre</label><input class="ap_cr_nombre mt-1 w-full border rounded-md px-2 py-1.5" value="${c.nombre ?? ''}"></div>
+          <div><label class="block text-xs font-medium">Parentesco</label><input class="ap_cr_parentesco mt-1 w-full border rounded-md px-2 py-1.5" value="${c.parentesco ?? ''}"></div>
+          <div><label class="block text-xs font-medium">Teléfono</label><input class="ap_cr_telefono mt-1 w-full border rounded-md px-2 py-1.5" value="${c.telefono ?? ''}"></div>
+          <div><label class="block text-xs font-medium">Email</label><input class="ap_cr_email mt-1 w-full border rounded-md px-2 py-1.5" value="${c.email ?? ''}"></div>
+          <div><label class="block text-xs font-medium">Prioridad</label><input type="number" min="1" class="ap_cr_prioridad mt-1 w-full border rounded-md px-2 py-1.5" value="${c.prioridad ?? 1}"></div>
+          <div class="md:col-span-5 text-right"><button type="button" class="ap_btnRemoveContact text-sm text-red-600">Eliminar</button></div>
+        </div>`;
+    }
+    function ap_open(mode='create', patient=null){
+      AP_MODE = mode; AP_EDIT_ID = patient?.id ?? null;
+      const modal  = document.getElementById('ap_modal');
+      const title  = document.getElementById('ap_title');
+      const submit = document.getElementById('ap_submit');
+      const form   = document.getElementById('ap_form');
+      form.reset?.();
+      const wrap = document.getElementById('ap_contactsWrap');
+      wrap.innerHTML = apContactRowTemplate();
+
+      document.getElementById('ap_user_email').value = '';
+      document.getElementById('ap_user_pass').value = '';
+
+      if (mode==='edit' && patient){
+        title.textContent='Editar paciente'; submit.textContent='Guardar cambios';
+        document.getElementById('ap_name').value      = patient.name ?? '';
+        document.getElementById('ap_age').value       = patient.age ?? '';
+        document.getElementById('ap_condition').value = patient.condition ?? '';
+        document.getElementById('ap_phone').value     = patient.phone ?? '';
+        document.getElementById('ap_address').value   = patient.address ?? '';
+        document.getElementById('ap_eps').value       = patient.eps ?? '';
+        document.getElementById('ap_blood').value     = patient.bloodGroup ?? '';
+        document.getElementById('ap_notes').value     = patient.notes ?? '';
+        const alergias = Array.isArray(patient.allergies) ? patient.allergies.map(a => a?.nombre).filter(Boolean) : [];
+        document.getElementById('ap_allergies').value = alergias.join(', ');
+        wrap.innerHTML = '';
+        (Array.isArray(patient.contacts) ? patient.contacts : []).forEach(c => {
+          wrap.insertAdjacentHTML('beforeend', apContactRowTemplate(c));
+        });
+        if (!wrap.children.length) wrap.insertAdjacentHTML('beforeend', apContactRowTemplate());
+        const acomp = patient.companion ?? {};
+        document.getElementById('ap_cp_nombre').value    = acomp.nombre ?? '';
+        document.getElementById('ap_cp_telefono').value  = acomp.telefono ?? '';
+        document.getElementById('ap_cp_email').value     = acomp.email ?? '';
+        document.getElementById('ap_cp_direccion').value = acomp.direccion ?? '';
+      } else { title.textContent='Añadir nuevo paciente'; submit.textContent='Guardar'; }
+      modal.classList.remove('hidden'); document.body.classList.add('modal-open');
+    }
+    function ap_close(){ document.getElementById('ap_modal').classList.add('hidden'); document.body.classList.remove('modal-open'); }
+    function ap_collectPayload(){
+      const name = document.getElementById('ap_name').value.trim();
+      const age  = Number(document.getElementById('ap_age').value);
+      if (!name || Number.isNaN(age)) throw new Error('Nombre y edad son obligatorios');
+      const payload = {
+        name, age,
+        condition:  document.getElementById('ap_condition').value.trim() || null,
+        phone:      document.getElementById('ap_phone').value.trim() || null,
+        address:    document.getElementById('ap_address').value.trim() || null,
+        eps:        document.getElementById('ap_eps').value.trim() || null,
+        bloodGroup: document.getElementById('ap_blood').value.trim() || null,
+        notes:      document.getElementById('ap_notes').value.trim() || null,
+      };
+      const rawAll = document.getElementById('ap_allergies').value;
+      payload.allergies = rawAll.split(',').map(s => s.trim()).filter(Boolean);
+      payload.contacts = [];
+      document.querySelectorAll('#ap_contactsWrap .ap-contact-row').forEach(row => {
+        const nombre     = row.querySelector('.ap_cr_nombre').value.trim();
+        const parentesco = row.querySelector('.ap_cr_parentesco').value.trim();
+        const telefono   = row.querySelector('.ap_cr_telefono').value.trim();
+        const email      = row.querySelector('.ap_cr_email').value.trim();
+        const prioridad  = Number(row.querySelector('.ap_cr_prioridad').value || 1);
+        if (nombre || telefono || email) payload.contacts.push({ nombre, parentesco: parentesco||null, telefono: telefono||null, email: email||null, prioridad });
+      });
+      const acomp = {
+        nombre:    document.getElementById('ap_cp_nombre').value.trim(),
+        telefono:  document.getElementById('ap_cp_telefono').value.trim(),
+        email:     document.getElementById('ap_cp_email').value.trim(),
+        direccion: document.getElementById('ap_cp_direccion').value.trim(),
+      };
+      const acompEmpty = !acomp.nombre && !acomp.telefono && !acomp.email && !acomp.direccion;
+      payload.companion = acompEmpty ? null : acomp;
+      return payload;
+    }
+
+    // Crear usuario+paciente (sin dispositivos).
+    async function crearPacienteCompleto(formData) {
+      const email = String(formData.userEmail || '').trim().toLowerCase();
+      const password = String(formData.userPassword || '');
+      if (!email || !password) { toastWarn('Debes indicar correo y contraseña del nuevo usuario.'); return; }
+      if (password.length < 6) { toastWarn('La contraseña debe tener al menos 6 caracteres.'); return; }
+
+      const u = await fetch(api('/api/admin/users'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role: 'USER' }),
+      });
+
+      if (!u.ok) { let ju = {}; try { ju = await u.json(); } catch {} toastError(ju?.error || 'No se pudo crear el usuario'); return; }
+      const user = await u.json();
+
+      const p = await fetch(api('/api/admin/patients'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerId: user.id,
+          name: formData.patient.name,
+          age: formData.patient.age,
+          condition: formData.patient.condition || null,
+          phone: formData.patient.phone || null,
+          address: formData.patient.address || null,
+          eps: formData.patient.eps || null,
+          bloodGroup: formData.patient.bloodGroup || null,
+          notes: formData.patient.notes || null,
+          allergies: formData.allergies || [],
+          contacts: formData.contacts || [],
+          companion: formData.companion || null,
+        }),
+      });
+
+      if (!p.ok) { let jp = {}; try { jp = await p.json(); } catch {} toastError(jp?.error || 'No se pudo crear el paciente'); return; }
+      toastOk('Usuario y paciente creados correctamente.');
+      return true;
+    }
+
+    // Wire modal "Añadir paciente"
+    function wireAddPatientModal(){
+      const openBtns = [document.getElementById('add-patient'), document.getElementById('btnNuevoPaciente')].filter(Boolean);
+      const modal = document.getElementById('ap_modal');
+      const cancel= document.getElementById('ap_cancel');
+      const bg    = modal.querySelector('.absolute.inset-0');
+      const form  = document.getElementById('ap_form');
+      const submit= document.getElementById('ap_submit');
+
+      openBtns.forEach(b => b.addEventListener('click', () => ap_open('create')));
+      cancel?.addEventListener('click', ap_close);
+      bg?.addEventListener('click', ap_close);
+
+      document.getElementById('ap_btnAddContact')?.addEventListener('click', () => {
+        document.getElementById('ap_contactsWrap').insertAdjacentHTML('beforeend', apContactRowTemplate());
+      });
+      document.getElementById('ap_contactsWrap')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('ap_btnRemoveContact')) {
+          e.target.closest('.ap-contact-row')?.remove();
+          if (!document.querySelector('#ap_contactsWrap .ap-contact-row')) {
+            document.getElementById('ap_contactsWrap').insertAdjacentHTML('beforeend', apContactRowTemplate());
+          }
+        }
+      });
+
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        submit.disabled = true; submit.textContent = 'Guardando...';
+        try {
+          const payload = ap_collectPayload();
+          const userEmail = document.getElementById('ap_user_email').value.trim().toLowerCase();
+          const userPass  = document.getElementById('ap_user_pass').value;
+
+          if (AP_MODE === 'edit' && AP_EDIT_ID) {
+            const res = await fetch(api(`/api/patients/${AP_EDIT_ID}`), {
+              method:'PUT', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify(payload)
+            });
+            const raw = await res.text(); let data = {}; try { data = JSON.parse(raw);} catch {}
+            if (!res.ok) { toastError(data?.error || 'No se pudo guardar el paciente.'); return; }
+            toastOk('Paciente actualizado correctamente.');
+          } else {
+            if (!userEmail || !userPass) { toastWarn('Para crear un paciente nuevo debes indicar el correo y la contraseña del usuario asociado.'); return; }
+            const ok = await crearPacienteCompleto({
+              userEmail, userPassword: userPass,
+              patient: payload,
+              allergies: payload.allergies,
+              contacts: payload.contacts,
+              companion: payload.companion
+            });
+            if (!ok) return;
+          }
+
+          ap_close();
+          await Promise.allSettled([
+            cargarPacientesTabla(),
+            cargarPacientesAside(),
+            actualizarStatPacientes(),
+            cargarDispositivos()
+          ]);
+        } catch (e) {
+          console.error(e);
+          toastError('No se pudo guardar el paciente (error de red/JS).');
+        } finally {
+          submit.disabled = false;
+          submit.textContent = AP_MODE==='edit'?'Guardar cambios':'Guardar';
+        }
+      });
+    }
+
+    // ===== MODAL Registrar dispositivo =====
+    function wireDeviceRegisterModal(){
+      const btn = document.getElementById('btnRegistrarDispositivo');
+      const modal = document.getElementById('dr_modal');
+      const cancel= document.getElementById('dr_cancel');
+      const bg    = modal.querySelector('.absolute.inset-0');
+      const form  = document.getElementById('dr_form');
+      const submit= document.getElementById('dr_submit');
+      const selPatient = document.getElementById('dr_patient');
+
+      const open = async () => {
+        selPatient.innerHTML = `<option value="">— Sin enlazar —</option>`;
+        try {
+          const pats = await fetchPacientes();
+          pats.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id; 
+            opt.textContent = `${p.id} — ${p.name}`;
+            selPatient.appendChild(opt);
+          });
+        } catch {}
+        form.reset?.();
+        modal.classList.remove('hidden'); 
+        document.body.classList.add('modal-open');
+      };
+
+      const close = () => { 
+        modal.classList.add('hidden'); 
+        document.body.classList.remove('modal-open'); 
+      };
+
+      btn?.addEventListener('click', open);
+      cancel?.addEventListener('click', close);
+      bg?.addEventListener('click', close);
+
+      form.addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const code  = (document.getElementById('dr_code').value  || '').trim();
+        const name  = (document.getElementById('dr_name').value  || '').trim();
+        const model = (document.getElementById('dr_model').value || '').trim();
+        const patientId = selPatient.value ? Number(selPatient.value) : null;
+
+        if (!/^\d{6}$/.test(code)) { 
+          toastWarn('El código debe tener 6 dígitos.'); 
+          return; 
+        }
+
+        submit.disabled = true; 
+        submit.textContent = 'Registrando...';
+
+        try {
+          const r = await fetch(api('/api/devices/admin/register'), {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              code,
+              pairingCode: code,   // 👈 se envía también como pairingCode
+              name,
+              model
+            })
+          });
+
+          if (!r.ok && r.status !== 409) {
+            const t = await r.text().catch(()=> ''); 
+            throw new Error(t || `HTTP ${r.status}`);
+          }
+
+          if (patientId) {
+            const a = await fetch(api('/api/devices/admin/assign'), {
+              method:'POST', 
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ pairing_code: code, patientId })
+            });
+            if (!a.ok) { 
+              const tt = await a.text().catch(()=> ''); 
+              throw new Error(tt || `HTTP ${a.status}`); 
+            }
+          }
+
+          toastOk(patientId ? 'Dispositivo registrado y enlazado.' : 'Dispositivo registrado.');
+          close();
+          await cargarDispositivos();
+        } catch (e) {
+          console.error(e);
+          toastError('No se pudo registrar/enlazar el dispositivo (ver consola).');
+        } finally {
+          submit.disabled = false; 
+          submit.textContent = 'Registrar';
+        }
+      });
+    }
+
+
+    // ===== Modal Eliminar dispositivo (con select) =====
+    function wireDeviceDeleteModal(){
+      const btn    = document.getElementById('btnEliminarDispositivo');
+      const modal  = document.getElementById('dd_modal');
+      const form   = document.getElementById('dd_form');
+      const sel    = document.getElementById('dd_select');
+      const cancel = document.getElementById('dd_cancel');
+      const submit = document.getElementById('dd_submit');
+
+      const open = async () => {
+        sel.innerHTML = `<option value="">— Selecciona —</option>`;
+        try {
+          const devices = await fetchDevices();
+          devices.forEach(d => {
+            const idShort = String(d.id).slice(0, 8);
+            const label = `${d.name || d.model || 'Dispositivo'} (${idShort}) · ${d.patient ? d.patient.name : 'Sin paciente'}`;
+            const opt = document.createElement('option');
+            opt.value = d.id; // UUID completo
+            opt.textContent = label;
+            sel.appendChild(opt);
+          });
+        } catch (e) { console.error(e); }
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+      };
+
+      const close = () => {
+        modal.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+      };
+
+      btn?.addEventListener('click', open);
+      cancel?.addEventListener('click', close);
+      modal.querySelector('.absolute.inset-0')?.addEventListener('click', close);
+
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const id = sel.value;
+        if (!id) return;
+
+        const ok = await openConfirmModal('¿Eliminar este dispositivo definitivamente?', { title: 'Eliminar dispositivo' });
+        if (!ok) return;
+
+        submit.disabled = true; submit.textContent = 'Eliminando...';
+        try {
+          const r = await fetch(api(`/api/admin/devices/${encodeURIComponent(id)}`), { method: 'DELETE' });
+          const t = await r.text().catch(()=> '');
+          if (!r.ok) {
+            toastError(t || 'No se pudo eliminar el dispositivo.');
+            return;
+          }
+          toastOk('Dispositivo eliminado.');
+          close();
+          await cargarDispositivos();
+        } catch (e) {
+          console.error(e);
+          toastError('Error de red al eliminar el dispositivo.');
+        } finally {
+          submit.disabled = false; submit.textContent = 'Eliminar';
+        }
+      });
+    }
+
+    // Logout modal
+    function wireLogoutModal(){
+      const avatar = document.getElementById('profile-avatar');
+      const modal  = document.getElementById('logout_modal');
+      const cancel = document.getElementById('logout_cancel');
+      const confirm= document.getElementById('logout_confirm');
+      const bg     = modal.querySelector('.absolute.inset-0');
+      const mobileBtn = document.getElementById('mobile-logout');
+      const open = () => modal.classList.remove('hidden');
+      const close= () => modal.classList.add('hidden');
+      avatar?.addEventListener('click', open);
+      mobileBtn?.addEventListener('click', open);
+      cancel?.addEventListener('click', close);
+      bg?.addEventListener('click', close);
+      confirm?.addEventListener('click', () => {
+        try { localStorage.removeItem('token'); localStorage.removeItem('role'); }
+        finally { window.location.replace('/iniciosesion.html'); }
+      });
+    }
+
+    // Dar de baja
+    async function dismissAlert(alertId) {
+      if (!alertId) return;
+
+      const okConf = await openConfirmModal('¿Dar de baja esta alerta?', { title: 'Dar de baja alerta' });
+      if (!okConf) return;
+
+      try {
+        const res = await fetch(api(`/api/alerts/${alertId}/dismiss`), { method: 'PATCH' });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          toastError(json?.error || 'No se pudo dar de baja la alerta.');
+          return;
+        }
+
+        const hash = (location.hash || '#panel').replace('#', '');
+
+        if (hash === 'panel') {
+          await Promise.allSettled([cargarAlertasPanel(), cargarEmergencias()]);
+        } else if (hash === 'alertas') {
+          await Promise.allSettled([cargarAlertas(), cargarEmergencias()]);
+        } else {
+          await cargarEmergencias();
+        }
+
+        // 👇 refrescar contador de “Alertas”
+        await actualizarStatAlertas();
+
+        toastOk('Alerta dada de baja.');
+      } catch (e) {
+        console.error(e);
+        toastError('Error de red al dar de baja la alerta.');
+      }
+    }
+
+    function wireDismissButtons() {
+      document.body.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-dismiss-alert');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        dismissAlert(id);
+      });
+    }
+
+
+
+    // Eliminar paciente
+    function wireEliminarPaciente(){
+      document.getElementById('btnEliminarPaciente')?.addEventListener('click', async ()=>{
+        const input = await openInputModal({
+          title: 'Eliminar paciente',
+          label: 'Ingresa el ID del paciente a eliminar',
+          placeholder: 'Ej: 5',
+          type: 'number'
+        });
+        if (!input) return;
+        const id = Number(input);
+        if (!Number.isInteger(id) || id <= 0) {
+          toastWarn('ID de paciente inválido.');
+          return;
+        }
+
+        const ok = await openConfirmModal(
+          'Se eliminará el paciente y sus datos asociados. ¿Deseas continuar?',
+          { title: 'Confirmar eliminación' }
+        );
+        if (!ok) return;
+
+        try {
+          const res = await fetch(api(`/api/admin/patients/${id}`), { method: 'DELETE' });
+          const txt = await res.text().catch(()=> '');
+          if (!res.ok) { console.error(txt); toastError('No se pudo eliminar el paciente.'); return; }
+          toastOk('Paciente eliminado.');
+          await Promise.allSettled([cargarPacientesTabla(), cargarPacientesAside(), actualizarStatPacientes(), cargarDispositivos()]);
+        } catch (e) { console.error(e); toastError('Error de red al eliminar paciente.'); }
+      });
+    }
+
+    // Listas alertas/emergencias/devices
+    async function cargarAlertas() {
+      const ul = document.getElementById('alertsList'); if (!ul) return;
+      ul.innerHTML = `<li class="p-4 text-sm text-gray-500">Cargando…</li>`;
+      const data = await fetchAlertas();
+      if (!data.length) { ul.innerHTML = `<li class="p-4 text-sm text-gray-500">Sin alertas.</li>`; return; }
+      ul.innerHTML = data.map(a => `
+        <li class="p-4 flex items-center">
+          <span class="px-2 py-1 text-xs font-semibold rounded-full ${a.type==='SOS'?'bg-red-100 text-red-800':a.type==='GEOFENCE_OUT'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}">${a.type}</span>
+          <div class="ml-4 flex-1">
+            <div class="font-medium text-gray-900">${a.patient?.name ?? '—'}</div>
+            <div class="text-sm text-gray-500">${new Date(a.createdAt).toLocaleString()}</div>
+          </div>
+          <a href="#panel" class="ml-2 px-3 py-1 rounded-md bg-blue-600 text-white">Ver en mapa</a>
+          ${a.status && String(a.status).toUpperCase()==='ACTIVE' ? `<button class="btn-dismiss-alert ml-2 px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm" data-id="${a.id}">Dar de baja</button>` : `<span class="ml-2 text-xs text-gray-500">Cerrada</span>`}
+        </li>`).join('');
+    }
+
+    async function cargarAlertasPanel() {
+      const ul = document.getElementById('alertsListPanel'); if (!ul) return;
+      ul.innerHTML = `<li class="px-6 py-4 text-sm text-gray-500">Cargando…</li>`;
+      const data = await fetchAlertas();
+      if (!data.length) { ul.innerHTML = `<li class="px-6 py-4 text-sm text-gray-500">Sin alertas.</li>`; return; }
+      ul.innerHTML = data.slice(0,5).map(a => `
+        <li class="px-6 py-4 flex items-center">
+          <div class="flex-shrink-0"><div class="h-10 w-10 rounded-full ${a.type==='SOS'?'bg-red-100':'bg-yellow-100'} flex items-center justify-center"><img src="https://placehold.co/20x20" class="h-5 w-5"></div></div>
+          <div class="ml-4 flex-1">
+            <div class="text-sm font-medium text-gray-900">${a.type}</div>
+            <div class="text-sm text-gray-500">${a.patient?.name ?? '—'} • ${new Date(a.createdAt).toLocaleString()}</div>
+          </div>
+            <a href="#alertas" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${a.type==='SOS'?'bg-red-100 text-red-800':'bg-yellow-100 text-yellow-800'}">Ver detalle</a>
+            ${a.status && String(a.status).toUpperCase()==='ACTIVE' ? `<button class="btn-dismiss-alert ml-2 px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs" data-id="${a.id}">Dar de baja</button>` : ''}
+        </li>`).join('');
+    }
+
+    async function cargarDispositivos() {
+      const asideList = document.getElementById('devicesList');
+      const pageList  = document.getElementById('devicesListPage');
+      const stat = document.getElementById('statDevices');
+
+      if (asideList) asideList.innerHTML = `<li class="px-6 py-4 text-sm text-gray-500">Cargando…</li>`;
+      if (pageList)  pageList.innerHTML  = `<li class="px-6 py-4 text-sm text-gray-500">Cargando…</li>`;
+
+      const data = await fetchDevices();
+      if (stat) stat.textContent = data.length ?? '0';
+
+      const renderItem = d => `
+        <li class="px-6 py-4 flex items-center">
+          <div class="flex-1">
+            <div class="text-sm font-medium text-gray-900">
+              ${d.name || 'Dispositivo'} 
+              <span class="text-gray-400 text-xs">
+                (${d.code ? 'Código ' + d.code : 'ID ' + d.id})
+              </span>
+            </div>
+            <div class="text-sm text-gray-500">
+              ${d.patient ? d.patient.name + ' (ID ' + d.patient.id + ')' : 'No asignado'} • 
+              Batería ${d.batteryPct ?? '-'}% • 
+              ${d.isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
+            </div>
+          </div>
+
+        </li>`;
+
+      const empty = `<li class="px-6 py-4 text-sm text-gray-500">Sin dispositivos.</li>`;
+      if (asideList) asideList.innerHTML = data.length ? data.map(renderItem).join('') : empty;
+      if (pageList)  pageList.innerHTML  = data.length ? data.map(renderItem).join('') : empty;
+    }
+
+    async function cargarEmergencias() {
+      const panels = [
+        document.getElementById('emergenciasListPanel'),
+        document.getElementById('emergenciasList')
+      ].filter(Boolean);
+
+      panels.forEach(el => el.innerHTML = `<li class="p-4 text-sm text-gray-500">Cargando emergencias…</li>`);
+
+      try {
+        const data = await fetchAlertas();
+
+        const emergencias = data.filter(a => {
+          const type = (a.type || '').toUpperCase();
+          const st   = (a.status || '').toUpperCase();
+
+          const esSOS = type === 'SOS';
+
+          const esActiva =
+            !st ||
+            st === 'ACTIVE' ||
+            st === 'ACTIVA' ||
+            st === 'OPEN';
+
+          return esSOS && esActiva;
+        });
+
+        const stat = document.getElementById('statEmergencias');
+        if (stat) stat.textContent = emergencias.length;
+
+        panels.forEach(el => {
+          if (!emergencias.length) {
+            el.innerHTML = `<li class="p-4 text-sm text-gray-500">Sin emergencias activas.</li>`;
+            return;
+          }
+
+          el.innerHTML = emergencias
+            .map(e => `
+              <li class="p-4 flex items-center">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">🚨 SOS</span>
+                <div class="ml-4 flex-1">
+                  <div class="font-medium text-gray-900">${e.patient?.name ?? 'Paciente desconocido'}</div>
+                  <div class="text-sm text-gray-500">${new Date(e.createdAt).toLocaleString()}</div>
+                </div>
+                
+                <button class="btn-dismiss-alert ml-2 px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm" data-id="${e.id}">
+                  Dar de baja
+                </button>
+              </li>
+            `)
+            .join('');
+        });
+
+      } catch (err) {
+        console.error('[cargarEmergencias] error:', err);
+        panels.forEach(el => el.innerHTML = `<li class="p-4 text-sm text-red-500">Error al cargar emergencias</li>`);
+      }
+    }
+
+    
+
+    // Abrir Google Maps con último track
+    async function abrirGoogleMapsConUltimaPosicion(patientId){
+      try {
+        const res = await fetch(api(`/api/tracks?patientId=${patientId}&limit=1`));
+        const data = await res.json();
+        const last = data?.[0];
+        if (!last) { toastWarn('Aún no hay ubicación registrada para este paciente.'); return; }
+        const lat = Number(last.lat), lng = Number(last.lng);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) { toastWarn('Coordenadas inválidas del último track.'); return; }
+        window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+      } catch (e) { console.error(e); toastError('No fue posible obtener la última ubicación.'); }
+    }
+
+    async function cargarUltimaPosicion(patientId) {
+      initMapOnce();
+      if (!gmap) return;
+      try {
+        const res = await fetch(api(`/api/tracks?patientId=${patientId}&limit=1`));
+        const data = await res.json();
+        const last = data[0];
+        if (last) {
+          const pos = { lat: Number(last.lat), lng: Number(last.lng) };
+          if (!gmarker) gmarker = new google.maps.Marker({ map: gmap });
+          gmarker.setPosition(pos); gmap.setCenter(pos); gmap.setZoom(17);
+          if (!ginfo) ginfo = new google.maps.InfoWindow();
+          ginfo.setContent(`<b>Paciente #${patientId}</b><br>Última posición<br>${new Date(last.timestamp).toLocaleString()}`);
+          ginfo.open(gmap, gmarker);
+        }
+      } catch (e) { console.warn('Sin tracks aún, usando centro por defecto.'); }
+    }
+
+    // NUEVA: eliminar usuario por email (con fallback)
+    function wireEliminarUsuario(){
+      document.getElementById('btnEliminarUsuario')?.addEventListener('click', async () => {
+        const email = await openInputModal({
+          title: 'Eliminar usuario',
+          label: 'Ingresa el correo del usuario a eliminar',
+          placeholder: 'correo@ejemplo.com',
+          type: 'email'
+        });
+        if (!email) return;
+
+        const ok = await openConfirmModal(
+          `Se eliminará el usuario ${email} y TODOS sus pacientes.\n¿Deseas continuar?`,
+          { title: 'Confirmar eliminación de usuario' }
+        );
+        if (!ok) return;
+
+        const body = JSON.stringify({ email });
+
+        async function tryDelete() {
+          return fetch(api('/api/admin/users/by-email'), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body
+          });
+        }
+        async function tryPostSamePath() {
+          return fetch(api('/api/admin/users/by-email'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body
+          });
+        }
+        async function tryPostAltPath() {
+          return fetch(api('/api/admin/users/delete-by-email'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body
+          });
+        }
+
+        try {
+          let res = await tryDelete();
+          if (!res.ok && (res.status === 404 || res.status === 405)) {
+            res = await tryPostSamePath();
+            if (!res.ok && (res.status === 404 || res.status === 405)) {
+              res = await tryPostAltPath();
+            }
+          }
+
+          const txt = await res.text().catch(()=> '');
+          let data = {}; try { data = JSON.parse(txt); } catch {}
+
+          if (!res.ok) {
+            toastError(data?.error || 'No se pudo eliminar el usuario.');
+            console.error('Eliminar usuario:', res.status, txt);
+            return;
+          }
+
+          toastOk('Usuario eliminado correctamente.');
+          await Promise.allSettled([
+            cargarPacientesTabla(),
+            cargarPacientesAside(),
+            actualizarStatPacientes(),
+            cargarDispositivos(),
+            cargarAlertasPanel(),
+            cargarEmergencias(),
+          ]);
+        } catch (e) {
+          console.error(e);
+          toastError('Error de red al eliminar el usuario.');
+        }
+      });
+    }
+  </script>
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC2je_yCpgeAKQPRQcj7EVO02bxyoIr-AU&callback=initMap" async defer></script>
+</body>
+</html>
+```

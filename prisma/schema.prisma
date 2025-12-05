@@ -1,0 +1,166 @@
+// prisma/schema.prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  role       String    @default("USER") // "ADMIN" | "USER"
+  sosEnabled Boolean   @default(false)
+  patients   Patient[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Patient {
+  id             Int                 @id @default(autoincrement())
+  name           String
+  age            Int
+  condition      String?
+  phone          String?
+  address        String?
+  eps            String?
+  bloodGroup     String?
+  notes          String?
+  emergencyName  String?
+  emergencyPhone String?
+  ownerId        Int
+  owner          User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  allergies         Allergy[]
+  contacts          Contact[]
+  companion         Companion?
+  devices           Device[]
+  tracks            Track[]
+  alerts            Alert[]
+
+  // Back-relations necesarios
+  emergencyContacts EmergencyContact[]
+  sosEvents         SosEvent[]
+
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model Allergy {
+  id        Int     @id @default(autoincrement())
+  nombre    String
+  patientId Int
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id         Int     @id @default(autoincrement())
+  nombre     String
+  parentesco String?
+  telefono   String?
+  email      String?
+  prioridad  Int     @default(1)
+  patientId  Int
+  patient    Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Companion {
+  id        Int     @id @default(autoincrement())
+  nombre    String?
+  telefono  String?
+  email     String?
+  direccion String?
+  patientId Int     @unique
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Device {
+  id               String    @id @default(uuid())
+
+  // Relación con Patient (Patient.id es Int)
+  patient          Patient?  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId        Int?
+
+  // Identificadores / nombres
+  code             String?   @unique // LEGACY: usado por /api/devices (POST) y algunos renders del frontend
+  name             String?
+  model            String?
+
+  // Estado
+  batteryPct       Float?    // 0..1 (si quieres porcentaje guarda 0.76 para 76%)
+  isConnected      Boolean   @default(false)
+  lastSeenAt       DateTime?
+
+  apiKey          String?  @unique
+
+  // Pairing nuevo
+  pairingCode      String?   @unique
+  pairingExpiresAt DateTime?
+
+  // Back-relation para eventos SOS
+  sosEvents        SosEvent[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([patientId])
+}
+
+model Alert {
+  id        Int      @id @default(autoincrement())
+  type      String   // "SOS" | "GEOFENCE_OUT" | ...
+  status    String   @default("ACTIVE") // "ACTIVE" | "RESOLVED"
+  createdAt DateTime @default(now())
+  patientId Int?
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Track {
+  id        String   @id @default(uuid())
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId Int
+  timestamp DateTime @default(now())
+  lat       Float
+  lng       Float
+  accuracy  Float?
+  battery   Float?
+
+  @@index([patientId, timestamp])
+}
+
+model EmergencyContact {
+  id        String   @id @default(uuid())
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId Int
+  name      String
+  phoneE164 String   // ej: +56912345678
+  priority  Int      @default(1)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId, active, priority])
+}
+
+model SosEvent {
+  id         String   @id @default(uuid())
+  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId  Int
+  device     Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId   String
+  createdAt  DateTime @default(now())
+  lat        Float?
+  lng        Float?
+  accuracy   Float?
+  battery    Float?
+  resolvedAt DateTime?
+  resolvedBy String?
+  note       String?
+
+  @@index([patientId, createdAt])
+  @@index([deviceId, createdAt])
+}

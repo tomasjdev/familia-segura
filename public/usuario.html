@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Familia Segura - Usuario</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #mapHome { height: 480px; }
+    .chip { display:inline-flex; align-items:center; gap:.4rem; font-size:.75rem; line-height:1rem; padding:.25rem .5rem; border-radius:9999px; font-weight:600; }
+    .link-tab { border-bottom:2px solid transparent; padding:.25rem .25rem; }
+    .link-tab.active { color:#fff; border-color:rgba(255,255,255,.9); }
+    .card { background:#fff; border-radius:.75rem; box-shadow:0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.1); }
+    .notice { background:#ecfeff; color:#083344; border:1px solid #a5f3fc; }
+    .modal-open { overflow:hidden; }
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  </style>
+</head>
+<body class="bg-blue-50">
+  <div class="min-h-screen">
+    <!-- Toasts -->
+    <div id="toast-wrap" class="fixed top-5 right-5 z-[20000] space-y-2 pointer-events-none"></div>
+
+    <!-- Navbar -->
+    <nav class="bg-emerald-700 text-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <!-- Lado izquierdo -->
+          <div class="flex items-center">
+            <div class="flex-shrink-0 flex items-center">
+              <img src="img/logoiniciosesion.png" alt="Logo" class="h-8 w-8">
+              <span class="ml-2 text-xl font-semibold">Familia Segura</span>
+            </div>
+            <div class="hidden md:ml-6 md:flex md:space-x-8">
+              <a href="#inicio"    id="tab-inicio"    class="router-link link-tab border-b-2 inline-flex items-center px-1 pt-1 text-sm font-medium">Inicio</a>
+              <a href="#historial" id="tab-historial" class="router-link link-tab border-b-2 inline-flex items-center px-1 pt-1 text-sm font-medium">Mi Historial</a>
+            </div>
+          </div>
+
+          <!-- Lado derecho -->
+          <div class="hidden md:ml-6 md:flex md:items-center gap-4">
+            <span id="nav-greeting" class="hidden text-sm">
+              Hola, <strong id="nav-username" class="font-semibold">—</strong>
+            </span>
+            <a href="#perfil" id="tab-perfil" class="router-link link-tab mr-0 inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/10 hover:bg-white/20" aria-label="Perfil">
+              <span id="whoami" class="sr-only">Perfil</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm-8 8a8 8 0 0116 0v2H4v-2z"/>
+              </svg>
+            </a>
+          </div>
+
+          <!-- Mobile -->
+          <div class="flex items-center md:hidden">
+            <button id="mobile-menu-button"
+                    class="inline-flex items-center justify-center p-2 rounded-md hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-controls="mobile-menu"
+                    aria-expanded="false"
+                    aria-label="Abrir menú">
+              <svg id="icon-menu" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
+              </svg>
+              <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menú mobile -->
+      <div id="mobile-menu" class="md:hidden hidden border-t border-emerald-600/40">
+        <div class="px-4 py-3 space-y-3">
+          <a href="#inicio" class="router-link block px-2 py-2 rounded hover:bg-white/10" id="m-link-inicio">Inicio</a>
+          <a href="#historial" class="router-link block px-2 py-2 rounded hover:bg-white/10" id="m-link-historial">Mi historial</a>
+          <div class="h-px bg-emerald-600/40 my-2"></div>
+          <div id="nav-greeting-sm" class="hidden text-sm">
+            Hola, <strong id="nav-username-sm" class="font-semibold">—</strong>
+          </div>
+          <a href="#perfil" class="router-link inline-flex items-center gap-2 px-2 py-2 rounded hover:bg-white/10" id="m-link-perfil" aria-label="Perfil">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm-8 8a8 8 0 0116 0v2H4v-2z"/>
+            </svg>
+            <span>Perfil</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+      <div id="avisosinSOS" class="notice card p-4 mb-6 hidden">
+        <p class="text-sm">✅ Actualmente <b>no verás emergencias SOS</b> en esta vista. Solo se mostrarán alertas de tipo <b>Caída</b> o <b>Fuera de zona</b>.</p>
+      </div>
+
+      <!-- ============ INICIO ============ -->
+      <section id="inicio" class="route">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="card p-6">
+            <h3 class="text-sm text-gray-500">Última ubicación</h3>
+            <p id="statUltimaUbicacion" class="text-2xl font-semibold text-gray-900 mt-1">Cargando…</p>
+            <p id="statUltimaUbicacionFecha" class="text-sm text-gray-500 mt-1">—</p>
+          </div>
+          <div class="card p-6">
+            <h3 class="text-sm text-gray-500">Estado del dispositivo</h3>
+            <p id="statEstadoDispositivo" class="text-2xl font-semibold text-gray-900 mt-1">—</p>
+            <p id="statBateria" class="text-sm text-gray-500 mt-1">—</p>
+            <p id="statCodigo" class="text-xs text-gray-400 mt-1">—</p>
+          </div>
+          <div class="card p-6">
+            <h3 class="text-sm text-gray-500">
+              Última alerta<span id="lblUltimaAlerta">(excluye SOS)</span>
+            </h3>
+            <!-- Badge ACTIVA / NO ACTIVA -->
+            <div class="mt-2">
+              <span id="lastAlertBadge"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+                NO ACTIVA
+              </span>
+            </div>
+            <p id="statUltimaAlerta" class="text-2xl font-semibold text-gray-900 mt-1">Sin alertas</p>
+            <p id="statUltimaAlertaFecha" class="text-sm text-gray-500 mt-1">—</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-xl font-semibold">Mi ubicación</h3>
+          <div id="mapHome" class="w-full card overflow-hidden"></div>
+          <div class="mt-1 text-sm  font-bold text-gray-500" id="ubicacionInfoHome">Cargando última posición…</div>
+        </div>
+      </section>
+
+      <!-- ============ HISTORIAL ============ -->
+      <section id="historial" class="route hidden">
+        <h2 class="text-2xl font-bold mb-4">Mi historial <span id="lblHistorial">(sin SOS)</span></h2>
+        <div class="card overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha/Hora</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Evento</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="historialTable" class="bg-white divide-y divide-gray-200">
+              <tr><td class="px-6 py-4" colspan="3">Cargando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ PERFIL ============ -->
+      <section id="perfil" class="route hidden">
+        <h2 class="text-2xl font-bold mb-4">Mi perfil</h2>
+        <div class="card p-6 space-y-4">
+          <p id="perfilNombre"><b>Nombre:</b> —</p>
+          <p id="perfilEdad"><b>Edad:</b> —</p>
+          <p id="perfilCondicion"><b>Condición:</b> —</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <p id="perfilTelefono"><b>Teléfono:</b> —</p>
+            <p id="perfilDireccion"><b>Dirección:</b> —</p>
+            <p id="perfilEPS"><b>Sistema de salud:</b> —</p>
+            <p id="perfilGrupoSang"><b>Grupo sanguíneo:</b> —</p>
+          </div>
+
+          <p id="perfilAlergias"><b>Alergias:</b> —</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 class="font-semibold mb-2">Contactos de emergencia</h3>
+              <ul id="perfilContactos" class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <li class="text-gray-400">—</li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="font-semibold mb-2">Acompañante</h3>
+              <div id="perfilAcompanante" class="text-sm text-gray-700">
+                <p class="text-gray-400">—</p>
+              </div>
+            </div>
+          </div>
+
+          <p id="perfilNotas" class="text-sm text-gray-600"><b>Notas:</b> —</p>
+
+          <button id="btnPerfilEditar" class="mt-2 px-4 py-2 bg-emerald-600 text-white rounded-md">Editar</button>
+
+          <button id="btnLogout" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            Cerrar sesión
+          </button>
+        </div>
+      </section>
+
+      <!-- ========= MODAL EDITAR PERFIL ========= -->
+      <div id="edit_modal" class="hidden fixed inset-0 z-50">
+        <div id="edit_backdrop" class="absolute inset-0 bg-black/50"></div>
+        <div class="relative mx-auto my-10 w-full max-w-3xl bg-white rounded-xl shadow-lg">
+          <div class="px-6 py-4 border-b flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Editar perfil</h3>
+            <button type="button" id="ed_close_x" class="text-gray-500 hover:text-gray-700">✖</button>
+          </div>
+
+          <!-- ¡Scroll interno del modal! -->
+          <form id="edit_form" class="p-6 space-y-6 overflow-y-auto max-h-[78vh]">
+            <!-- Datos principales -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium">Nombre</label>
+                <input id="ed_name" class="mt-1 w-full border rounded-md px-3 py-2" required>
+              </div>
+              <div>
+                <label class="block text-sm font-medium">Edad</label>
+                <input id="ed_age" type="number" min="0" class="mt-1 w-full border rounded-md px-3 py-2">
+              </div>
+              <div>
+                <label class="block text-sm font-medium">Condición</label>
+                <input id="ed_condition" class="mt-1 w-full border rounded-md px-3 py-2">
+              </div>
+              <div>
+                <label class="block text-sm font-medium">Teléfono</label>
+                <input id="ed_phone" class="mt-1 w-full border rounded-md px-3 py-2">
+              </div>
+              <div>
+                <label class="block text-sm font-medium">Dirección</label>
+                <input id="ed_address" class="mt-1 w-full border rounded-md px-3 py-2">
+              </div>
+              <div>
+                <label class="block text-sm font-medium">Sistema de salud (EPS)</label>
+                <input id="ed_eps" class="mt-1 w-full border rounded-md px-3 py-2">
+              </div>
+              <div>
+                <label class="block text-sm font-medium">Grupo sanguíneo</label>
+                <input id="ed_blood" class="mt-1 w-full border rounded-md px-3 py-2">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium">Alergias (separadas por coma)</label>
+                <input id="ed_allergies" class="mt-1 w-full border rounded-md px-3 py-2" placeholder="penicilina, frutos secos">
+              </div>
+            </div>
+
+            <!-- Contactos -->
+            <div class="border rounded-md p-4">
+              <h4 class="font-semibold mb-3">Contactos de emergencia</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2 font-medium text-sm text-gray-600">Contacto 1</div>
+                <div><label class="block text-xs font-medium">Nombre</label><input id="ed_c1_name" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Parentesco</label><input id="ed_c1_rel" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Teléfono</label><input id="ed_c1_phone" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Email</label><input id="ed_c1_email" type="email" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Prioridad</label><input id="ed_c1_prio" type="number" min="1" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+
+                <div class="md:col-span-2 font-medium text-sm text-gray-600 pt-2">Contacto 2 (opcional)</div>
+                <div><label class="block text-xs font-medium">Nombre</label><input id="ed_c2_name" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Parentesco</label><input id="ed_c2_rel" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Teléfono</label><input id="ed_c2_phone" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Email</label><input id="ed_c2_email" type="email" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Prioridad</label><input id="ed_c2_prio" type="number" min="1" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+              </div>
+            </div>
+
+            <!-- Acompañante -->
+            <div class="border rounded-md p-4">
+              <h4 class="font-semibold mb-3">Acompañante</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="block text-xs font-medium">Nombre</label><input id="ed_comp_name" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Teléfono</label><input id="ed_comp_phone" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Email</label><input id="ed_comp_email" type="email" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+                <div><label class="block text-xs font-medium">Dirección</label><input id="ed_comp_addr" class="mt-1 w-full border rounded-md px-3 py-2"></div>
+              </div>
+            </div>
+
+            <!-- Notas -->
+            <div>
+              <label class="block text-sm font-medium">Notas</label>
+              <textarea id="ed_notes" rows="3" class="mt-1 w-full border rounded-md px-3 py-2"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 border-t pt-3">
+              <button type="button" id="ed_cancel" class="px-4 py-2 rounded-md border">Cancelar</button>
+              <button id="ed_submit" class="px-4 py-2 rounded-md bg-emerald-600 text-white">Guardar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <!-- ====== FIN MODAL ====== -->
+
+    </main>
+  </div>
+
+  <script>
+    /* ========= Helper: normalizar teléfonos CL a E.164 ========= */
+    function normalizeCLNumber(raw) {
+      let s = String(raw || '').trim();
+      s = s.replace(/[^\+\d]/g, '');
+      if (s.startsWith('+56')) return s;
+      if (s.startsWith('56')) return '+' + s;
+      if (/^\d{9}$/.test(s) || /^\d{8}$/.test(s)) return '+56' + s;
+      if (s.startsWith('+')) return s;
+      return s ? '+56' + s : s;
+    }
+
+    /* ========= TOASTS ========= */
+    function showToast(message, type = 'info', timeout = 4000) {
+      const wrap = document.getElementById('toast-wrap');
+      const color = { success:'bg-emerald-600', error:'bg-red-600', warning:'bg-amber-600', info:'bg-slate-700' }[type] || 'bg-slate-700';
+      const icon  = { success:'✓', error:'✕', warning:'⚠', info:'ℹ' }[type] || 'ℹ';
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto text-white shadow-lg rounded-lg ${color} px-4 py-3 flex items-start gap-3 w-[320px]`;
+      el.innerHTML = `<div class="text-xl leading-none">${icon}</div><div class="text-sm leading-5 flex-1">${message}</div><button class="ml-2 text-white/80 hover:text-white" aria-label="Cerrar">✖</button>`;
+      el.querySelector('button').onclick = () => wrap.removeChild(el);
+      wrap.appendChild(el); setTimeout(() => { if (wrap.contains(el)) wrap.removeChild(el); }, timeout);
+    }
+
+    /* ========= CONFIG & AUTH ========= */
+    const API = '';
+    (function(){
+      const orig = window.fetch;
+      window.fetch = (input, init={})=>{
+        const token = localStorage.getItem('token');
+        const headers = new Headers(init.headers || {});
+        if (token) headers.set('Authorization','Bearer '+token);
+        return orig(input, { ...init, headers });
+      };
+    })();
+
+    /* ========= GUARD ========= */
+    (function guard(){
+      const token = localStorage.getItem('token');
+      const role  = (localStorage.getItem('role')||'').toUpperCase();
+      if (!token) { window.location.replace('/iniciosesion.html'); return; }
+      if (role !== 'USER') { window.location.replace('/inicio.html'); return; }
+      document.getElementById('whoami').textContent = 'Perfil';
+    })();
+
+    /* ========= STATE ========= */
+    const urlParams = new URLSearchParams(location.search);
+    const SHOW_SOS = urlParams.has('sos') ? urlParams.get('sos') !== '0' : true;
+    const PATIENT_ID_FALLBACK = 1;
+    const USER_ID = urlParams.get('userId') ? Number(urlParams.get('userId')) : null;
+    let PATIENT_ID = PATIENT_ID_FALLBACK;
+
+    let mapsApiReady=false, mapHomeObj=null, markerHome=null;
+    const fmt = (d) => new Date(d).toLocaleString();
+
+    /* ========= NAV GREETING (Fijo) ========= */
+    function setNavGreeting(p){
+      const name = p?.name ?? '—';
+      const navName = document.getElementById('nav-username');
+      const navWrap = document.getElementById('nav-greeting');
+      const navNameSm = document.getElementById('nav-username-sm');
+      const navWrapSm = document.getElementById('nav-greeting-sm');
+      if (navName) navName.textContent = name;
+      if (navWrap) navWrap.classList.remove('hidden');
+      if (navNameSm) navNameSm.textContent = name;
+      if (navWrapSm) navWrapSm.classList.remove('hidden');
+    }
+
+    /* ========= Labels SOS ========= */
+    (function initLabels(){
+      const aviso = document.getElementById('avisosinSOS');
+      const lblHist = document.getElementById('lblHistorial');
+      const lblUlt = document.getElementById('lblUltimaAlerta');
+      if (!SHOW_SOS) {
+        aviso?.classList.remove('hidden');
+        lblHist && (lblHist.textContent='(sin SOS)');
+        lblUlt  && (lblUlt.textContent =' (excluye SOS)');
+      } else {
+        aviso?.classList.add('hidden');
+        lblHist && (lblHist.textContent='');
+        lblUlt  && (lblUlt.textContent ='');
+      }
+    })();
+
+    /* ========= API helpers ========= */
+    async function fetchPacientes(){ const r=await fetch(`${API}/api/patients`); if(!r.ok) throw new Error('patients'); return r.json(); }
+    async function resolvePatientId(){
+      if (USER_ID!=null) { try { const all=await fetchPacientes(); const p=all.find(x=>x.userId===USER_ID); if (p){ PATIENT_ID=p.id; return p; } } catch {} }
+      try { const all=await fetchPacientes(); const p=all.find(x=>x.id===PATIENT_ID_FALLBACK)||all[0]; if (p) PATIENT_ID=p.id; return p; }
+      catch { return null; }
+    }
+    async function fetchMiPerfil(){ const r=await fetch(`${API}/api/patients`); const data=await r.json(); return data.find(p=>p.id===PATIENT_ID); }
+    async function fetchMisAlertasCrudas(){ const r=await fetch(`${API}/api/alerts`); const all=await r.json(); return all.filter(a=>((a?.patient&&a.patient.id)||a?.patientId)===PATIENT_ID); }
+    async function fetchMisAlertas(){ const all=await fetchMisAlertasCrudas(); return SHOW_SOS?all:all.filter(a=>a.type!=='SOS'); }
+    async function fetchMiUltimaPosicion(){ const r=await fetch(`${API}/api/tracks?patientId=${PATIENT_ID}&limit=1`); const data=await r.json(); return data[0]; }
+    async function fetchMiDispositivo(){ const r=await fetch(`${API}/api/devices`); const data=await r.json(); return data.find(d=>d.patientId===PATIENT_ID); }
+
+    /* ========= ESTADO DEL DISPOSITIVO (via /api/devices/mine) ========= */
+    async function cargarEstadoDispositivoUsuario() {
+      try {
+        const res = await fetch(`${API}/api/devices/mine`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const devices = await res.json();
+
+        const estadoEl = document.getElementById('statEstadoDispositivo');
+        const batEl    = document.getElementById('statBateria');
+        const codigoEl = document.getElementById('statCodigo');
+
+        if (!devices.length) {
+          if (estadoEl) estadoEl.textContent = 'Sin dispositivo';
+          if (batEl)    batEl.textContent    = 'Batería: -';
+          if (codigoEl) codigoEl.textContent = 'Código: -';
+          return;
+        }
+
+        const d = devices[0];
+
+        if (estadoEl) {
+          estadoEl.textContent = d.isConnected ? 'Conectado' : 'Desconectado';
+        }
+        if (batEl) {
+          const pct = d.batteryPct != null ? d.batteryPct : '-';
+          batEl.textContent = `Batería: ${pct}${pct !== '-' ? '%' : ''}`;
+        }
+        if (codigoEl) {
+          codigoEl.textContent = `Código: ${d.code ?? '-'}`;
+        }
+      } catch (e) {
+        console.error('[cargarEstadoDispositivoUsuario] error:', e);
+      }
+    }
+
+    /* ========= INICIO ========= */
+    async function cargarResumenInicio(){
+      try {
+        const p=await fetchMiPerfil();
+        window.__mePatient = p;
+        setNavGreeting(p);
+      } catch {
+        setNavGreeting(null);
+      }
+
+      try {
+        const last=await fetchMiUltimaPosicion();
+        const el=document.getElementById('statUltimaUbicacion');
+        const elFecha=document.getElementById('statUltimaUbicacionFecha');
+        if (last){
+          const lat=Number(last.lat).toFixed(5), lng=Number(last.lng).toFixed(5);
+          const dest=encodeURIComponent(`${last.lat},${last.lng}`);
+          const url=`https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+          el.innerHTML=`<a href="${url}" target="_blank" rel="noopener" class="underline decoration-emerald-600 hover:opacity-80" title="Abrir en Google Maps">${lat}, ${lng}</a>`;
+          elFecha.textContent=`Actualizado: ${fmt(last.timestamp)}`;
+        } else { el.textContent='Sin datos'; elFecha.textContent='—'; }
+      } catch {
+        document.getElementById('statUltimaUbicacion').textContent='Error';
+        document.getElementById('statUltimaUbicacionFecha').textContent='—';
+      }
+
+      // Estado del dispositivo usando /api/devices/mine
+      await cargarEstadoDispositivoUsuario();
+
+      // ===== Última alerta (incluye estado ACTIVA / CERRADA) =====
+      try {
+        const alertas = await fetchMisAlertas();
+        const last = alertas?.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+
+        const tEl   = document.getElementById('statUltimaAlerta');        // texto principal
+        const fEl   = document.getElementById('statUltimaAlertaFecha');   // fecha/hora
+        const badge = document.getElementById('lastAlertBadge');          // pill ACTIVA / NO ACTIVA
+
+        if (!last) {
+          if (tEl) tEl.textContent = 'Sin alertas registradas';
+          if (fEl) fEl.textContent = '—';
+          if (badge) {
+            badge.textContent = 'NO ACTIVA';
+            badge.classList.add('bg-gray-100','text-gray-700');
+            badge.classList.remove('bg-red-100','text-red-800');
+          }
+        } else {
+          const isActive = (last.status || '').toUpperCase() === 'ACTIVE';
+
+          if (tEl) {
+            tEl.textContent = isActive
+              ? 'Alerta activada'
+              : 'Última alerta cerrada';
+          }
+
+          if (fEl) {
+            fEl.textContent = new Date(last.createdAt).toLocaleString('es-CL', {
+              dateStyle: 'short',
+              timeStyle: 'medium'
+            });
+          }
+
+          if (badge) {
+            badge.textContent = isActive ? 'ACTIVA' : 'NO ACTIVA';
+            badge.classList.toggle('bg-red-100', isActive);
+            badge.classList.toggle('text-red-800', isActive);
+            badge.classList.toggle('bg-gray-100', !isActive);
+            badge.classList.toggle('text-gray-700', !isActive);
+          }
+        }
+      } catch (e) {
+        console.error('[usuario] cargarResumenInicio/última alerta', e);
+        const tEl = document.getElementById('statUltimaAlerta');
+        const fEl = document.getElementById('statUltimaAlertaFecha');
+        if (tEl) tEl.textContent = 'Error al cargar alerta';
+        if (fEl) fEl.textContent = '—';
+      }
+
+      await renderMapaHome();
+    }
+
+    /* ========= MAPA ========= */
+    window.initMap = function(){ mapsApiReady=true; if (document.getElementById('mapHome')) renderMapaHome(); };
+    function ensureMapHome(){
+      if (!mapsApiReady || typeof google==='undefined' || !google.maps) return null;
+      if (!mapHomeObj){
+        const el=document.getElementById('mapHome'); if (!el) return null;
+        mapHomeObj=new google.maps.Map(el,{center:{lat:-33.4489,lng:-70.6693},zoom:12});
+      }
+      return mapHomeObj;
+    }
+    async function renderMapaHome(){
+      const info=document.getElementById('ubicacionInfoHome');
+      const map=ensureMapHome(); if (!map) return;
+      try{
+        const last=await fetchMiUltimaPosicion();
+        if (last){
+          const pos={lat:Number(last.lat), lng:Number(last.lng)};
+          if (!markerHome) markerHome=new google.maps.Marker({map, title:'Tu última ubicación'});
+          markerHome.setPosition(pos); map.setCenter(pos); map.setZoom(14);
+          info && (info.textContent=`Última actualización: ${fmt(last.timestamp)}`, info.classList.remove('text-red-600'));
+        } else { info && (info.textContent='Sin datos de ubicación.'); }
+      } catch { info && (info.textContent='Error al cargar ubicación.', info.classList.add('text-red-600')); }
+    }
+
+    /* ========= HISTORIAL ========= */
+    async function renderMiHistorial() {
+      const tbody = document.getElementById('historialTable');
+      tbody.innerHTML = `<tr><td class="px-6 py-4" colspan="3">Cargando…</td></tr>`;
+      try {
+        const [alertas, tracks] = await Promise.all([
+          fetchMisAlertas(),
+          fetch(`${API}/api/tracks?patientId=${PATIENT_ID}&limit=50`).then(r=>r.json())
+        ]);
+        const eventos = [
+          ...alertas.map(a => ({ fecha: a.createdAt, evento: a.type, detalle: (a.status || '—') })),
+          ...tracks.map(t => ({ fecha: t.timestamp, evento: 'TRACK', detalle: `${Number(t.lat).toFixed(5)}, ${Number(t.lng).toFixed(5)}` }))
+        ].sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
+
+        if (!eventos.length) {
+          tbody.innerHTML = `<tr><td class="px-6 py-4" colspan="3">Sin registros</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = eventos.map(e => `
+          <tr>
+            <td class="px-6 py-4 text-sm text-gray-900">${fmt(e.fecha)}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">${e.evento}</td>
+            <td class="px-6 py-4 text-sm text-gray-500">${e.detalle}</td>
+          </tr>
+        `).join('');
+      } catch {
+        tbody.innerHTML = `<tr><td class="px-6 py-4 text-sm text-red-600" colspan="3">Error al cargar historial</td></tr>`;
+      }
+    }
+
+    /* ========= PERFIL (vista) ========= */
+    async function renderPerfil(){
+      try{
+        const p=await fetchMiPerfil(); if(!p) return;
+        window.__mePatient = p;
+        setNavGreeting(p);
+
+        document.getElementById('perfilNombre').innerHTML    = `<b>Nombre:</b> ${p.name}`;
+        document.getElementById('perfilEdad').innerHTML      = `<b>Edad:</b> ${p.age}`;
+        document.getElementById('perfilCondicion').innerHTML = `<b>Condición:</b> ${p.condition ?? '-'}`;
+        document.getElementById('perfilTelefono').innerHTML  = `<b>Teléfono:</b> ${p.phone ?? '-'}`;
+        document.getElementById('perfilDireccion').innerHTML = `<b>Dirección:</b> ${p.address ?? '-'}`;
+        document.getElementById('perfilEPS').innerHTML       = `<b>Sistema de salud:</b> ${p.eps ?? '-'}`;
+        document.getElementById('perfilGrupoSang').innerHTML = `<b>Grupo sanguíneo:</b> ${p.bloodGroup ?? '-'}`;
+        document.getElementById('perfilNotas').innerHTML     = `<b>Notas:</b> ${p.notes ?? '-'}`;
+
+        const alergiasTxt = Array.isArray(p.allergies) && p.allergies.length
+          ? p.allergies.map(a=>a?.nombre ?? (typeof a==='string'?a:null)).filter(Boolean).join(', ')
+          : null;
+        document.getElementById('perfilAlergias').innerHTML  = `<b>Alergias:</b> ${alergiasTxt || '-'}`;
+
+        const ul=document.getElementById('perfilContactos');
+        if (Array.isArray(p.contacts) && p.contacts.length){
+          ul.innerHTML=p.contacts.map(c=>{
+            const titulo=[c?.nombre, c?.parentesco ? `(${c.parentesco})` : ''].filter(Boolean).join(' ');
+            const linea2=[c?.telefono, c?.email].filter(Boolean).join(' • ');
+            const prio=c?.prioridad ? ` • Prioridad ${c.prioridad}` : '';
+            return `<li><span class="font-medium">${titulo}</span> — ${linea2}${prio}</li>`;
+          }).join('');
+        } else { ul.innerHTML=`<li class="text-gray-400">—</li>`; }
+
+        const acompDiv=document.getElementById('perfilAcompanante');
+        const acomp=p.companion;
+        acompDiv.innerHTML = acomp
+          ? `<p><span class="font-medium">${acomp.nombre}</span></p><p>${[acomp.telefono, acomp.email].filter(Boolean).join(' • ')}</p><p>${acomp.direccion || ''}</p>`
+          : `<p class="text-gray-400">—</p>`;
+      } catch(e){ console.warn('renderPerfil error', e); }
+    }
+
+    /* ========= EDIT MODAL logic ========= */
+    function _nullIfEmpty(s){ const t=String(s??'').trim(); return t===''? null : t; }
+    function _contactFrom(prefix){
+      const nombre=_nullIfEmpty(document.getElementById(prefix+'_name').value);
+      const telefonoRaw=_nullIfEmpty(document.getElementById(prefix+'_phone').value);
+      const telefono = telefonoRaw ? normalizeCLNumber(telefonoRaw) : null;
+      const email=_nullIfEmpty(document.getElementById(prefix+'_email').value);
+      const parentesco=_nullIfEmpty(document.getElementById(prefix+'_rel').value);
+      const prioRaw=document.getElementById(prefix+'_prio').value;
+      const prioridad=prioRaw? Number(prioRaw) : null;
+      if (!nombre && !telefono && !email) return null;
+      return { nombre, telefono, email, parentesco, prioridad };
+    }
+
+    function openEditModal() {
+      const p = window.__mePatient || {};
+      const get = (v, d='') => (v==null ? d : v);
+
+      document.getElementById('ed_name').value       = get(p.name);
+      document.getElementById('ed_age').value        = get(p.age);
+      document.getElementById('ed_condition').value  = get(p.condition);
+      document.getElementById('ed_phone').value      = get(p.phone);
+      document.getElementById('ed_address').value    = get(p.address);
+      document.getElementById('ed_eps').value        = get(p.eps);
+      document.getElementById('ed_blood').value      = get(p.bloodGroup);
+
+      let alergiasCSV = '';
+      if (Array.isArray(p.allergies) && p.allergies.length) {
+        alergiasCSV = p.allergies.map(a => (typeof a === 'string' ? a : (a?.nombre || ''))).filter(Boolean).join(', ');
+      }
+      document.getElementById('ed_allergies').value = alergiasCSV;
+
+      const c1 = Array.isArray(p.contacts) ? p.contacts[0] : null;
+      const c2 = Array.isArray(p.contacts) ? p.contacts[1] : null;
+      document.getElementById('ed_c1_name').value  = get(c1?.nombre);
+      document.getElementById('ed_c1_rel').value   = get(c1?.parentesco);
+      document.getElementById('ed_c1_phone').value = get(c1?.telefono);
+      document.getElementById('ed_c1_email').value = get(c1?.email);
+      document.getElementById('ed_c1_prio').value  = get(c1?.prioridad);
+      document.getElementById('ed_c2_name').value  = get(c2?.nombre);
+      document.getElementById('ed_c2_rel').value   = get(c2?.parentesco);
+      document.getElementById('ed_c2_phone').value = get(c2?.telefono);
+      document.getElementById('ed_c2_email').value = get(c2?.email);
+      document.getElementById('ed_c2_prio').value  = get(c2?.prioridad);
+
+      const comp = p?.companion || null;
+      document.getElementById('ed_comp_name').value  = get(comp?.nombre);
+      document.getElementById('ed_comp_phone').value = get(comp?.telefono);
+      document.getElementById('ed_comp_email').value = get(comp?.email);
+      document.getElementById('ed_comp_addr').value  = get(comp?.direccion);
+
+      document.getElementById('ed_notes').value = get(p.notes);
+
+      document.getElementById('edit_modal').classList.remove('hidden');
+      document.body.classList.add('modal-open');
+    }
+    function closeEditModal() {
+      document.getElementById('edit_modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    }
+    document.getElementById('ed_cancel')?.addEventListener('click', closeEditModal);
+    document.getElementById('ed_close_x')?.addEventListener('click', closeEditModal);
+    document.getElementById('edit_backdrop')?.addEventListener('click', closeEditModal);
+
+    document.getElementById('edit_form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const alergiasCSV = document.getElementById('ed_allergies').value || '';
+      const alergiesArr = alergiasCSV.split(',').map(s => s.trim()).filter(Boolean);
+
+      const comp = {
+        nombre:    _nullIfEmpty(document.getElementById('ed_comp_name').value),
+        telefono:  (()=>{
+          const v=_nullIfEmpty(document.getElementById('ed_comp_phone').value);
+          return v ? normalizeCLNumber(v) : null;
+        })(),
+        email:     _nullIfEmpty(document.getElementById('ed_comp_email').value),
+        direccion: _nullIfEmpty(document.getElementById('ed_comp_addr').value),
+      };
+
+      const body = {
+        name:       _nullIfEmpty(document.getElementById('ed_name').value),
+        age:        Number(document.getElementById('ed_age').value || 0) || null,
+        condition:  _nullIfEmpty(document.getElementById('ed_condition').value),
+        phone:      (()=>{
+          const v=_nullIfEmpty(document.getElementById('ed_phone').value);
+          return v ? normalizeCLNumber(v) : null;
+        })(),
+        address:    _nullIfEmpty(document.getElementById('ed_address').value),
+        eps:        _nullIfEmpty(document.getElementById('ed_eps').value),
+        bloodGroup: _nullIfEmpty(document.getElementById('ed_blood').value),
+        notes:      _nullIfEmpty(document.getElementById('ed_notes').value),
+        allergies:  alergiesArr,
+        contacts:   [_contactFrom('ed_c1'), _contactFrom('ed_c2')].filter(Boolean),
+        companion:  (comp.nombre || comp.telefono || comp.email || comp.direccion) ? comp : null,
+      };
+
+      const btn = document.getElementById('ed_submit');
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        const r = await fetch(`${API}/api/patients/me`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await r.json().catch(()=> ({}));
+        if (!r.ok) { alert(data?.error || 'No se pudo guardar'); return; }
+        window.__mePatient = data;
+        setNavGreeting(data);
+        await renderPerfil();
+        closeEditModal();
+        showToast('Perfil actualizado correctamente.', 'success');
+      } catch (err) {
+        console.error(err);
+        alert('Error de red al guardar.');
+        showToast('Error de red al guardar.', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Guardar';
+      }
+    });
+
+    // Abrir modal
+    document.getElementById('btnPerfilEditar')?.addEventListener('click', openEditModal);
+
+    /* ========= SOS público ========= */
+    async function getCoordsOnce(){
+      return new Promise((resolve)=>{
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          pos=>resolve({ lat:pos.coords.latitude, lng:pos.coords.longitude }),
+          ()=>resolve(null),
+          { maximumAge:15000, timeout:5000, enableHighAccuracy:true }
+        );
+      });
+    }
+    (function wireSosWeb(){
+      const btn = document.getElementById('btnSos');
+      const statusEl = document.getElementById('sosStatus');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Enviando…';
+        if (statusEl) statusEl.textContent = 'Enviando…';
+        try {
+          const fromName = (document.getElementById('nav-username')?.textContent
+                            || document.getElementById('nav-username-sm')?.textContent
+                            || 'Usuario');
+          const coords = await getCoordsOnce();
+          const payload = { fromName, lat: coords?.lat, lng: coords?.lng };
+          const res = await fetch(`${API}/api/alerts/sos-web`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json().catch(()=> ({}));
+          if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+          if (statusEl) {
+            const extra = (json.failed && json.failed > 0) ? ` (${json.sent} ok, ${json.failed} fallidos)` : ` (${json.sent} enviado${json.sent===1?'':'s'})`;
+            statusEl.textContent = 'SOS enviado' + extra;
+            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+          }
+          showToast('SOS enviado correctamente.', 'success');
+        } catch (e) {
+          console.error(e);
+          if (statusEl) statusEl.textContent = 'Error al enviar SOS';
+          showToast('Error al enviar SOS.', 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      });
+    })();
+
+    /* ========= NAVBAR mobile toggle ========= */
+    (function mobileMenu(){
+      const btn = document.getElementById('mobile-menu-button');
+      const menu = document.getElementById('mobile-menu');
+      const iconOpen = document.getElementById('icon-menu');
+      const iconClose = document.getElementById('icon-close');
+
+      function closeMenu(){
+        menu.classList.add('hidden');
+        btn.setAttribute('aria-expanded','false');
+        iconOpen.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+      }
+      function openMenu(){
+        menu.classList.remove('hidden');
+        btn.setAttribute('aria-expanded','true');
+        iconOpen.classList.add('hidden');
+        iconClose.classList.remove('hidden');
+      }
+      function toggleMenu(){
+        if (menu.classList.contains('hidden')) openMenu(); else closeMenu();
+      }
+
+      btn?.addEventListener('click', toggleMenu);
+      document.querySelectorAll('#mobile-menu a.router-link').forEach(a=>a.addEventListener('click', closeMenu));
+      document.addEventListener('click', (ev)=>{
+        if (!menu || !btn) return;
+        const insideMenu = menu.contains(ev.target);
+        const insideBtn  = btn.contains(ev.target);
+        if (!insideMenu && !insideBtn) closeMenu();
+      });
+      window.addEventListener('hashchange', closeMenu);
+    })();
+
+    /* ========= ROUTER ========= */
+    function setActive(tab){
+      ["inicio","historial","perfil"].forEach(id=>{
+        const sec=document.getElementById(id);
+        const tabEl=document.getElementById('tab-'+id);
+        if (sec)  sec.classList.toggle("hidden",id!==tab);
+        if (tabEl) tabEl.classList.toggle("active", id===tab);
+      });
+    }
+    async function renderRoute(){
+      const hash=(location.hash||"#inicio").replace("#","");
+      setActive(hash);
+      if (hash==='inicio')         await cargarResumenInicio();
+      else if (hash==='historial') await renderMiHistorial();
+      else if (hash==='perfil')    await renderPerfil();
+    }
+
+    /* ========= INIT ========= */
+    window.addEventListener("hashchange", renderRoute);
+    window.addEventListener("load", async ()=> {
+      if(!location.hash) location.hash="#inicio";
+      await resolvePatientId();
+
+      // Cargamos perfil una vez para fijar saludo aunque el hash no sea "inicio"
+      try { 
+        const p = await fetchMiPerfil(); 
+        window.__mePatient = p; 
+        setNavGreeting(p); 
+      } catch { 
+        setNavGreeting(null); 
+      }
+
+      await renderRoute();
+      if (mapsApiReady) renderMapaHome();
+
+      // leer estado del dispositivo al entrar
+      cargarEstadoDispositivoUsuario();
+      // refrescar cada 60 segundos
+      setInterval(cargarEstadoDispositivoUsuario, 60000);
+    });
+
+    /* ========= LOGOUT ========= */
+    document.getElementById('btnLogout')?.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('sosEnabled');
+      sessionStorage.clear();
+      window.location.href = '/iniciosesion.html';
+    });
+  </script>
+
+  <!-- Google Maps JS -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC2je_yCpgeAKQPRQcj7EVO02bxyoIr-AU&callback=initMap" async defer></script>
+</body>
+</html>
