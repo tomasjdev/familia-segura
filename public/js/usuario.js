@@ -1,6 +1,6 @@
 // public/js/usuario.js
 (function () {
-  const API = "";
+  const API = typeof API_URL !== "undefined" ? API_URL : "";
 
   const token = localStorage.getItem("token");
   const role = (localStorage.getItem("role") || "").toUpperCase();
